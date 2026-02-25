@@ -29,7 +29,7 @@ BGM_REDIRECT_URI = "http://localhost:8000/api/auth/callback" # This should match
 DATA_FILE = "data.json"
 IMAGES_DIR = "images"
 USERS_FILE = "users.json"
-ADMINS = ["1173408"] # Bangumi User IDs
+ADMINS_FILE = "admins.json"
 
 def load_users():
     if not os.path.exists(USERS_FILE):
@@ -57,10 +57,17 @@ def get_user_quota(user_id: str):
     save_users(users)
     return user
 
+def load_admins():
+    if not os.path.exists(ADMINS_FILE):
+        return ["1173408"]
+    with open(ADMINS_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 def check_permission(user_id: str, action: str):
     if user_id == "guest":
         return False
-    if user_id in ADMINS:
+    admins = load_admins()
+    if user_id in admins:
         return True
     
     user = get_user_quota(user_id)
@@ -70,7 +77,8 @@ def check_permission(user_id: str, action: str):
     return True
 
 def record_action(user_id: str, action: str):
-    if user_id in ADMINS: return
+    admins = load_admins()
+    if user_id in admins: return
     users = load_users()
     if action == "add": users[user_id]["adds"] += 1
     elif action == "edit": users[user_id]["edits"] += 1
@@ -143,8 +151,9 @@ def get_user_info(user_id: str = "guest", nickname: str = "游客"):
     if user_id == "guest":
         return {"logged_in": False, "role": "visitor"}
     
+    admins = load_admins()
     quota = get_user_quota(user_id)
-    role = "admin" if user_id in ADMINS else "user"
+    role = "admin" if user_id in admins else "user"
     return {
         "logged_in": True,
         "user_id": user_id,
@@ -159,14 +168,17 @@ def add_node(
     source: str = Form(...),
     related: str = Form(...),
     tags: str = Form(...),
-    connections: str = Form(...),
+    extension: str = Form(...),
     x: float = Form(0.0),
     y: float = Form(0.0),
     user_id: str = Form("guest"),
+    parent_id: Optional[int] = Form(None),
     image: Optional[UploadFile] = File(None)
 ):
+    if user_id == "guest":
+        raise HTTPException(403, "游客状态-请登录后进行新增")
     if not check_permission(user_id, "add"):
-        raise HTTPException(403, "今日新增次数已达上限或权限不足")
+        raise HTTPException(403, "普通用户-你今天已经新增了一个爱音了，明天再来吧")
     
     data = load_data()
     nodes = data.get("nodes", [])
@@ -186,30 +198,28 @@ def add_node(
         "id": new_id,
         "name": name,
         "image": image_url,
-        "source": source,
-        "related": related,
+        "source": json.loads(source),
+        "related": json.loads(related),
         "tags": json.loads(tags),
-        "connections": json.loads(connections),
+        "extension": json.loads(extension),
         "x": x,
         "y": y
     }
     
+    # Automatic connection from parent to new node
+    if parent_id is not None:
+        parent = next((n for n in nodes if n["id"] == parent_id), None)
+        if parent:
+            if "extension" not in parent:
+                parent["extension"] = []
+            if new_id not in parent["extension"]:
+                parent["extension"].append(new_id)
+
     nodes.append(new_node)
     data["nodes"] = nodes
     save_data(data)
     record_action(user_id, "add")
     return new_node
-
-@app.put("/api/nodes/{node_id}/position")
-def update_node_position(node_id: int, pos: dict):
-    data = load_data()
-    nodes = data.get("nodes", [])
-    node = next((n for n in nodes if n["id"] == node_id), None)
-    if node:
-        node["x"] = pos.get("x", 0)
-        node["y"] = pos.get("y", 0)
-        save_data(data)
-    return {"status": "ok"}
 
 @app.put("/api/nodes/{node_id}")
 def update_node(
@@ -218,12 +228,14 @@ def update_node(
     source: str = Form(...),
     related: str = Form(...),
     tags: str = Form(...),
-    connections: str = Form(...),
+    extension: str = Form(...),
     user_id: str = Form("guest"),
     image: Optional[UploadFile] = File(None)
 ):
+    if user_id == "guest":
+        raise HTTPException(403, "游客状态-请登录后进行修改")
     if not check_permission(user_id, "edit"):
-        raise HTTPException(403, "今日修改次数已达上限或权限不足")
+        raise HTTPException(403, "普通用户-你今天已经修改了一个爱音了，明天再来吧")
         
     data = load_data()
     nodes = data.get("nodes", [])
@@ -243,10 +255,10 @@ def update_node(
         node["image"] = f"/images/{filename}"
         
     node["name"] = name
-    node["source"] = source
-    node["related"] = related
+    node["source"] = json.loads(source)
+    node["related"] = json.loads(related)
     node["tags"] = json.loads(tags)
-    node["connections"] = json.loads(connections)
+    node["extension"] = json.loads(extension)
     
     save_data(data)
     record_action(user_id, "edit")
@@ -254,8 +266,10 @@ def update_node(
 
 @app.delete("/api/nodes/{node_id}")
 def delete_node(node_id: int, user_id: str = "guest"):
+    if user_id == "guest":
+        raise HTTPException(403, "游客状态-请登录后进行删除")
     if not check_permission(user_id, "delete"):
-        raise HTTPException(403, "今日删除次数已达上限或权限不足")
+        raise HTTPException(403, "普通用户-你今天已经删除了一个爱音了，明天再来吧")
         
     data = load_data()
     nodes = data.get("nodes", [])
@@ -264,9 +278,12 @@ def delete_node(node_id: int, user_id: str = "guest"):
     if node_idx is None:
         raise HTTPException(status_code=404, detail="Node not found")
         
-    # Remove connections to this node
+    # Remove extensions pointing to this node
     for n in nodes:
-        if node_id in n.get("connections", []):
+        if "extension" in n and node_id in n["extension"]:
+            n["extension"].remove(node_id)
+        # Handle old key if it exists
+        if "connections" in n and node_id in n["connections"]:
             n["connections"].remove(node_id)
             
     nodes.pop(node_idx)

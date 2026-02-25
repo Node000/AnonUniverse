@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.DS_Store
+.env
+
+# Backend
+backend/__pycache__/
+backend/users.json
+backend/images/*
+!backend/images/default.png
