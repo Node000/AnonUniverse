@@ -1,0 +1,70 @@
+{
+  "nodes": [
+    {
+      "id": 1,
+      "name": "千早爱音（原作）",
+      "image": "https://api.dicebear.com/7.x/avataaars/svg?seed=anon1&backgroundColor=ff69b4",
+      "source": "BanG Dream! It's MyGO!!!!!",
+      "related": "Ave Mujica",
+      "tags": ["原作", "主唱", "节奏吉他", "羽丘高中"],
+      "connections": [2, 3, 4],
+      "x": 400,
+      "y": 300
+    },
+    {
+      "id": 2,
+      "name": "Anonymous（迷因版）",
+      "image": "https://api.dicebear.com/7.x/avataaars/svg?seed=anon2&backgroundColor=1a1a2e",
+      "source": "网络二创",
+      "related": "面具梗、谜语人",
+      "tags": ["二创", "迷因", "面具", "匿名"],
+      "connections": [1, 5],
+      "x": 700,
+      "y": 200
+    },
+    {
+      "id": 3,
+      "name": "爱音（Q版粘土人）",
+      "image": "https://api.dicebear.com/7.x/avataaars/svg?seed=anon3&backgroundColor=ffb6c1",
+      "source": "Good Smile Company",
+      "related": "粘土人#2149",
+      "tags": ["Q版", "周边", "手办", "可爱"],
+      "connections": [1],
+      "x": 200,
+      "y": 450
+    },
+    {
+      "id": 4,
+      "name": "爱音（校服）",
+      "image": "https://api.dicebear.com/7.x/avataaars/svg?seed=anon4&backgroundColor=4169e1",
+      "source": "BanG Dream! It's MyGO!!!!!",
+      "related": "羽丘女子学园",
+      "tags": ["原作", "校服", "日常"],
+      "connections": [1, 6],
+      "x": 400,
+      "y": 550
+    },
+    {
+      "id": 5,
+      "name": "爱音（表情包）",
+      "image": "https://api.dicebear.com/7.x/avataaars/svg?seed=anon5&backgroundColor=ffd700",
+      "source": "粉丝创作",
+      "related": "贴吧、QQ群",
+      "tags": ["二创", "表情包", "搞笑"],
+      "connections": [2],
+      "x": 900,
+      "y": 300
+    },
+    {
+      "id": 6,
+      "name": "爱音（演出服）",
+      "image": "https://api.dicebear.com/7.x/avataaars/svg?seed=anon6&backgroundColor=ff1493",
+      "source": "BanG Dream! It's MyGO!!!!!",
+      "related": "Live现场",
+      "tags": ["原作", "演出服", "MyGO!!!!!"],
+      "connections": [1, 4],
+      "x": 600,
+      "y": 500
+    }
+  ]
+}
