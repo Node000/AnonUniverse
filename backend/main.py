@@ -313,8 +313,24 @@ def delete_node(node_id: int, user_id: str = "guest", nickname: str = "未知用
     nodes = data.get("nodes", [])
     
     node_idx = next((i for i, n in enumerate(nodes) if n["id"] == node_id), None)
-    if node_idx is None:
+    if (node_idx is None):
         raise HTTPException(status_code=404, detail="Node not found")
+    
+    node = nodes[node_idx]
+    
+    # Check if any other node's extension points to this node? (Referenced elsewhere)
+    # The requirement: if it has extensions (children), it cannot be deleted.
+    if ("extension" in node and len(node["extension"]) > 0):
+        # Specific block: if this node has sub-nodes (branches), it cannot be deleted unless children are gone.
+        raise HTTPException(
+            status_code=400, 
+            detail=f"该形象「{node['name']}」尚有后续的分支/后辈节点，无法删除（请先删除其关联的所有后辈形象）。"
+        )
+
+    # Special protection for the root node if it's the only one of its kind? 
+    # Or as the user mentioned: "只要有一个其他爱音存在，id为1的千早爱音就是不能删除的"
+    if (node_id == 1 and len(nodes) > 1):
+        raise HTTPException(status_code=400, detail="根节点爱音受到宇宙法则保护，在其他爱音被清理完之前不可删除。")
         
     # Remove extensions pointing to this node
     for n in nodes:

@@ -801,14 +801,17 @@ onMounted(async () => {
   if (userIdFromUrl && nicknameFromUrl) {
     localStorage.setItem('user_id', userIdFromUrl)
     localStorage.setItem('nickname', nicknameFromUrl)
+    // IMPORTANT: Fetch info using the URL values directly to avoid any race condition with localStorage
+    await fetchUserInfo(userIdFromUrl, nicknameFromUrl)
     // Clean up URL
     window.history.replaceState({}, document.title, "/")
+  } else {
+    // Normal load from storage
+    const savedUserId = localStorage.getItem('user_id') || 'guest'
+    const savedNickname = localStorage.getItem('nickname') || '游客'
+    await fetchUserInfo(savedUserId, savedNickname)
   }
-
-  const savedUserId = localStorage.getItem('user_id') || 'guest'
-  const savedNickname = localStorage.getItem('nickname') || '游客'
   
-  await fetchUserInfo(savedUserId, savedNickname)
   await fetchGraphData()
   initNetwork()
 
@@ -838,7 +841,7 @@ onUnmounted(() => {
     <!-- Loading Animation -->
     <div v-if="loading" class="loading-overlay">
       <div class="loader"></div>
-      <p>正在加载千早爱音的世界...</p>
+      <p>正在加载千早爱音宇宙...</p>
     </div>
 
     <!-- UI Buttons -->
