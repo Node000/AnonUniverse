@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, ref, reactive, nextTick } from 'vue'
+import { onMounted, onUnmounted, ref, reactive, nextTick, computed } from 'vue'
 import { Network } from 'vis-network'
 import { DataSet } from 'vis-data'
 import axios from 'axios'
@@ -66,6 +66,38 @@ let edgesData = new DataSet([])
 
 // Track focused node to handle enlargement state
 const focusedNodeId = ref(null)
+
+const canDeleteSelectedNode = computed(() => {
+  if (!selectedNode.value || !currentUser.logged_in) return false
+  
+  // 1. Root node protection (id: 1)
+  // Logic: if it is node 1 and there is more than 1 node total, it's the root and can't be deleted.
+  const isRoot = selectedNode.value.id === 1 || selectedNode.value.id === '1'
+  if (isRoot && nodesData.get().length > 1) return false
+  
+  // 2. Leaf node check (if it has children in extension array)
+  if (selectedNode.value.extension && selectedNode.value.extension.length > 0) return false
+  
+  // 3. Quota check (for non-admins)
+  if (currentUser.role !== 'admin') {
+    if (!currentUser.quota || (currentUser.quota.deletes >= 1)) return false
+  }
+  
+  return true
+})
+
+const deleteDisabledReason = computed(() => {
+  if (!selectedNode.value) return ''
+  if (!currentUser.logged_in) return '请登录后操作'
+  
+  const isRoot = selectedNode.value.id === 1 || selectedNode.value.id === '1'
+  if (isRoot && nodesData.get().length > 1) return '根节点受保护，在有其他爱音存在时不可删除'
+  if (selectedNode.value.extension && selectedNode.value.extension.length > 0) return '此节点尚有子分支，请先删除子图谱节点'
+  
+  if (currentUser.role !== 'admin' && currentUser.quota && currentUser.quota.deletes >= 1) return '今日删除配额已用完'
+  
+  return '删除该形象'
+})
 
 const fetchGraphData = async () => {
   try {
@@ -1009,7 +1041,13 @@ onUnmounted(() => {
             <div class="action-buttons">
               <button class="btn edit" @click="startEdit">修改</button>
               <button class="btn add" @click="startAdd">新增</button>
-              <button class="btn delete" @click="deleteNode">删除</button>
+              <button 
+                class="btn delete" 
+                :class="{ 'disabled-btn': !canDeleteSelectedNode }" 
+                :disabled="!canDeleteSelectedNode"
+                @click="deleteNode"
+                :title="deleteDisabledReason"
+              >删除</button>
             </div>
           </template>
 
@@ -2039,6 +2077,12 @@ textarea::-webkit-scrollbar {
 .btn.edit { background: #4a90e2; }
 .btn.add { background: #50e3c2; }
 .btn.delete { background: #d0021b; }
+
+.btn:disabled {
+  background: #555 !important;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 
 .node-info-footer {
   padding-top: 15px;
