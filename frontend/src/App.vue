@@ -48,6 +48,7 @@ const editForm = reactive({
   related: [],
   tags: '',
   extension: [],
+  introduction: '',
   imageFile: null,
   imagePreview: null
 })
@@ -162,6 +163,7 @@ const renderNodes = (data) => {
       ...node,
       source,
       related,
+      introduction: node.introduction || '',
       id: node.id,
       label: node.name,
       shape: 'circularImage',
@@ -335,6 +337,7 @@ const startEdit = () => {
     related: JSON.parse(JSON.stringify(rawRelated)),
     tags: selectedNode.value.tags.join(','),
     extension: selectedNode.value.extension || [],
+    introduction: selectedNode.value.introduction || '',
     imagePreview: selectedNode.value.image
   })
 }
@@ -351,6 +354,7 @@ const startAdd = () => {
     source: { name: '', link: '' },
     related: [],
     tags: '',
+    introduction: '',
     imagePreview: null
   })
 }
@@ -503,6 +507,28 @@ const removeRelated = (index) => {
   editForm.related.splice(index, 1)
 }
 
+// Side Panel Drag-to-Scroll Logic
+const panelContent = ref(null)
+const panelState = reactive({ isDragging: false, startY: 0, scrollStart: 0 })
+
+const handlePanelMouseDown = (e) => {
+  panelState.isDragging = true
+  panelState.startY = e.pageY - panelContent.value.offsetTop
+  panelState.scrollStart = panelContent.value.scrollTop
+}
+
+const handlePanelMouseMove = (e) => {
+  if (!panelState.isDragging) return
+  e.preventDefault()
+  const y = e.pageY - panelContent.value.offsetTop
+  const walk = (y - panelState.startY) * 1.5
+  panelContent.value.scrollTop = panelState.scrollStart - walk
+}
+
+const handlePanelMouseUp = () => {
+  panelState.isDragging = false
+}
+
 const submitForm = async () => {
   if (!editForm.name.trim()) {
     alert('请输入形象名字')
@@ -523,6 +549,7 @@ const submitForm = async () => {
   formData.append('related', JSON.stringify(cleanedRelated))
   formData.append('tags', JSON.stringify(editForm.tags.split(',').map(t => t.trim())))
   formData.append('extension', JSON.stringify(isAdding.value ? [] : editForm.extension))
+  formData.append('introduction', editForm.introduction)
   formData.append('user_id', currentUser.user_id)
   formData.append('nickname', currentUser.nickname)
   if (parentIdForNewNode.value) {
@@ -902,19 +929,26 @@ onUnmounted(() => {
     <Transition name="slide">
       <div v-if="isPanelOpen" class="side-panel">
         
-        <!-- Node History Button (Pink, Round, SVG Icon) -->
-        <button 
-          v-if="!isEditing && !isAdding" 
-          class="node-update-history-btn-round" 
-          title="更新记录"
-          @click.stop="toggleHistory(selectedNode.id)"
+        <div 
+          class="panel-content"
+          ref="panelContent"
+          @mousedown="handlePanelMouseDown"
+          @mousemove="handlePanelMouseMove"
+          @mouseup="handlePanelMouseUp"
+          @mouseleave="handlePanelMouseUp"
         >
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        
-        <div class="panel-content">
+          <!-- Node History Button (Pink, Round, SVG Icon) - Moved inside to scroll with content -->
+          <button 
+            v-if="!isEditing && !isAdding" 
+            class="node-update-history-btn-round" 
+            title="更新记录"
+            @click.stop="toggleHistory(selectedNode.id)"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          
           <!-- View Mode -->
           <template v-if="!isEditing && !isAdding && selectedNode">
             <div class="image-container">
@@ -931,6 +965,11 @@ onUnmounted(() => {
               <label>出处：</label>
               <a v-if="selectedNode.source.link" :href="selectedNode.source.link" target="_blank" class="info-link">{{ selectedNode.source.name }}</a>
               <span v-else>{{ selectedNode.source.name }}</span>
+            </div>
+
+            <div class="info-item" v-if="selectedNode.introduction">
+              <label>介绍：</label>
+              <span class="info-intro">{{ selectedNode.introduction }}</span>
             </div>
             
             <div class="info-item">
@@ -986,6 +1025,11 @@ onUnmounted(() => {
                 <input v-model="editForm.source.name" placeholder="作品名字">
                 <input v-model="editForm.source.link" placeholder="链接 (可选)">
               </div>
+            </div>
+
+            <div class="input-group">
+              <label>介绍</label>
+              <textarea v-model="editForm.introduction" placeholder="简单介绍一下这个版本/形象..." rows="3"></textarea>
             </div>
 
             <div class="input-group">
@@ -1163,6 +1207,7 @@ onUnmounted(() => {
 }
 
 .app-container.light-mode .input-group input,
+.app-container.light-mode .input-group textarea,
 .app-container.light-mode .pair-input input {
   background: #fdfdfd;
   color: #1a1a2e;
@@ -1613,6 +1658,17 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 
+input,
+textarea {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+input::-webkit-scrollbar,
+textarea::-webkit-scrollbar {
+  display: none !important;
+}
+
 .input-group {
   margin-bottom: 15px;
 }
@@ -1624,13 +1680,23 @@ onUnmounted(() => {
   margin-bottom: 5px;
 }
 
-.input-group input {
+.input-group input,
+.input-group textarea {
   width: 100%;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 105, 180, 0.3);
   color: #fff;
   padding: 8px 12px;
   border-radius: 4px;
+  font-family: inherit;
+  resize: vertical;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.input-group input::-webkit-scrollbar,
+.input-group textarea::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 /* Pair Input Stylings */
@@ -1814,9 +1880,10 @@ onUnmounted(() => {
   border-left: 1px solid rgba(255, 105, 180, 0.3);
   box-shadow: -10px 0 20px rgba(0,0,0,0.5);
   z-index: 200;
-  padding: 40px 20px;
+  padding: 0; /* Removed fixed padding to let scroll container fill the panel */
   display: flex;
   flex-direction: column;
+  overflow: hidden; 
 }
 
 .close-btn {
@@ -1855,9 +1922,21 @@ onUnmounted(() => {
 }
 
 .panel-content {
+  position: relative;
   overflow-y: auto;
   flex: 1;
-  padding-top: 20px; /* Space for buttons */
+  padding: 60px 20px 40px 20px; 
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  cursor: grab;
+}
+
+.panel-content:active {
+  cursor: grabbing;
+}
+
+.panel-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .image-container {
@@ -1892,6 +1971,17 @@ onUnmounted(() => {
   color: #888;
   font-size: 14px;
   margin-bottom: 5px;
+}
+
+.info-intro {
+  display: block;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px;
+  border-radius: 8px;
+  border-left: 3px solid #ff69b4;
+  font-size: 14px;
 }
 
 .tag-list {

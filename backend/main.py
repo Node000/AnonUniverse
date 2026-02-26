@@ -197,6 +197,7 @@ def add_node(
     related: str = Form(...),
     tags: str = Form(...),
     extension: str = Form(...),
+    introduction: str = Form(""),
     x: float = Form(0.0),
     y: float = Form(0.0),
     user_id: str = Form("guest"),
@@ -231,6 +232,7 @@ def add_node(
         "related": json.loads(related),
         "tags": json.loads(tags),
         "extension": json.loads(extension),
+        "introduction": introduction,
         "x": x,
         "y": y
     }
@@ -258,6 +260,7 @@ def update_node(
     related: str = Form(...),
     tags: str = Form(...),
     extension: str = Form(...),
+    introduction: str = Form(""),
     user_id: str = Form("guest"),
     nickname: str = Form("未知用户"),
     image: Optional[UploadFile] = File(None)
@@ -289,6 +292,7 @@ def update_node(
     node["related"] = json.loads(related)
     node["tags"] = json.loads(tags)
     node["extension"] = json.loads(extension)
+    node["introduction"] = introduction
     
     save_data(data)
     record_action(user_id, "edit", node["id"], node["name"], nickname)
