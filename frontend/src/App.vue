@@ -99,6 +99,27 @@ const deleteDisabledReason = computed(() => {
   return '删除该形象'
 })
 
+const canEditSelectedNode = computed(() => {
+  if (!selectedNode.value || !currentUser.logged_in) return false
+  if (currentUser.role === 'admin') return true
+  return currentUser.quota && currentUser.quota.edits < 1
+})
+
+const canAddNode = computed(() => {
+  if (!currentUser.logged_in) return false
+  if (currentUser.role === 'admin') return true
+  return currentUser.quota && currentUser.quota.adds < 1
+})
+
+const editButtonsDisabledReason = computed(() => {
+  if (!currentUser.logged_in) return '请登录后操作'
+  if (currentUser.role !== 'admin') {
+    if (isAdding.value && currentUser.quota.adds >= 1) return '今日新增配额已用完'
+    if (!isAdding.value && currentUser.quota.edits >= 1) return '今日修改配额已用完'
+  }
+  return ''
+})
+
 const fetchGraphData = async () => {
   try {
     const response = await axios.get(`${apiBase}/api/nodes`)
@@ -1000,6 +1021,13 @@ onUnmounted(() => {
           
           <!-- View Mode -->
           <template v-if="!isEditing && !isAdding && selectedNode">
+            <!-- Close Button (Moved inside to scroll with content) -->
+            <button class="panel-inner-close-btn" @click="isPanelOpen = false" title="关闭面板">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+
             <div class="image-container">
               <img 
                 :src="selectedNode.image.startsWith('http') ? selectedNode.image : `${apiBase}${selectedNode.image}`" 
@@ -1039,8 +1067,18 @@ onUnmounted(() => {
             </div>
 
             <div class="action-buttons">
-              <button class="btn edit" @click="startEdit">修改</button>
-              <button class="btn add" @click="startAdd">新增</button>
+              <button 
+                class="btn edit" 
+                :disabled="!canEditSelectedNode" 
+                :title="!canEditSelectedNode ? '今日修改配额已用完' : ''"
+                @click="startEdit"
+              >修改</button>
+              <button 
+                class="btn add" 
+                :disabled="!canAddNode"
+                :title="!canAddNode ? '今日新增配额已用完' : ''"
+                @click="startAdd"
+              >新增</button>
               <button 
                 class="btn delete" 
                 :class="{ 'disabled-btn': !canDeleteSelectedNode }" 
@@ -1974,6 +2012,29 @@ textarea::-webkit-scrollbar {
   transform: scale(1.1);
 }
 
+.panel-inner-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 35px;
+  height: 35px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s;
+  z-index: 202;
+}
+
+.panel-inner-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+}
+
 .panel-content {
   position: relative;
   overflow-y: auto;
@@ -2253,5 +2314,74 @@ textarea::-webkit-scrollbar {
 }
 .slide-up-enter-from, .slide-up-leave-to {
   transform: translateY(100%);
+}
+
+/* Mobile Responsive Adjustments */
+@media screen and (max-width: 768px) {
+  .top-left {
+    top: 10px;
+    left: 10px;
+  }
+  
+  .left-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .top-right {
+    top: 10px;
+    right: 10px;
+  }
+  
+  .user-status {
+    padding: 6px 12px;
+    max-width: 130px;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bottom-left {
+    bottom: 80px; /* Offset to avoid site-info button */
+    left: 10px;
+    width: calc(100% - 20px);
+  }
+  
+  .search-container {
+    width: 100%;
+  }
+
+  .bottom-right {
+    bottom: 20px;
+    right: 10px;
+  }
+
+  .side-panel {
+    width: 100%; /* Full screen width on mobile */
+    max-width: 100%;
+  }
+  
+  .graph-container.shifted {
+    transform: none; /* Don't shift graph on mobile to keep space */
+    opacity: 0.3; /* Dim it instead */
+  }
+
+  .site-info-panel {
+    padding: 20px;
+    height: auto;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .site-info-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .bottom-left.panel-up, .bottom-right.panel-up {
+    transform: translateY(-400px);
+  }
 }
 </style>
