@@ -48,6 +48,8 @@ const historyType = ref('global') // 'global' or 'node'
 // Site info state
 const showSiteInfo = ref(false)
 
+const isHistoryLoading = ref(false)
+
 const editForm = reactive({
   id: null,
   name: '',
@@ -246,10 +248,22 @@ const renderNodes = (data) => {
     if (node.extension) {
       node.extension.forEach(targetId => {
         if (nodeIds.has(targetId)) {
+          // 根据父节点的重要程度设置不同的连线长度
+          let baseLength = 150;
+          const rootId = (node.id === 1 || node.id === '1');
+          const secondaryId = (node.id === 2 || node.id === '2');
+          
+          if (rootId) baseLength = 400;      // 核心向外推得更远
+          else if (secondaryId) baseLength = 250; // 二级节点
+          
+          // 加入 20% 的随机扰动，打破同心圆的刻板感
+          const jitter = Math.floor(Math.random() * (baseLength * 0.2));
+          
           edges.push({ 
             id: `${node.id}-${targetId}`, 
             from: node.id, 
-            to: targetId 
+            to: targetId,
+            length: baseLength + jitter
           })
         }
       })
@@ -683,18 +697,21 @@ const toggleHistory = async (nodeId = null) => {
     showHistory.value = false
     return
   }
+  showHistory.value = true // Show modal immediately
   await fetchHistory(nodeId)
 }
 
 const fetchHistory = async (nodeId = null) => {
+  isHistoryLoading.value = true
   try {
     const url = nodeId ? `${apiBase}/api/history?node_id=${nodeId}` : `${apiBase}/api/history`
     const response = await axios.get(url)
     historyData.value = response.data
     historyType.value = nodeId ? 'node' : 'global'
-    showHistory.value = true
   } catch (error) {
     console.error('Failed to fetch history:', error)
+  } finally {
+    isHistoryLoading.value = false
   }
 }
 
@@ -728,23 +745,31 @@ const initNetwork = () => {
       color: { color: '#ff69b4', highlight: '#ff1493', opacity: 0.6 },
       width: 2,
       arrows: { to: { enabled: false } },
-      arrowStrikethrough: false
+      arrowStrikethrough: false,
+      smooth: {
+        enabled: true,
+        type: 'continuous',
+        roundness: 0.5
+      }
     },
     physics: {
       enabled: true,
-      stabilization: {
-        enabled: true,
-        iterations: 1000
-      },
-      barnesHut: {
-        gravitationalConstant: -1000,
-        centralGravity: 0.02,
-        springLength: 200,
-        springConstant: 0.01,
+      solver: 'forceAtlas2Based',
+      forceAtlas2Based: {
+        gravitationalConstant: -200, // 增加斥力
+        centralGravity: 0.015,
+        springConstant: 0.03, // 降低弹力系数以允许更长的连线拉伸
+        springLength: 150,    // 基础长度
         damping: 0.4,
         avoidOverlap: 1
       },
-      minVelocity: 0.01
+      stabilization: {
+        enabled: true,
+        iterations: 1000,
+        updateInterval: 50
+      },
+      adaptiveTimestep: true,
+      minVelocity: 0.05
     },
     layout: {
       randomSeed: 42
@@ -924,12 +949,20 @@ onUnmounted(() => {
 
     <div class="ui-layer top-right">
       <div class="header-controls">
-        <div class="user-status" :class="currentUser.logged_in ? 'login-active' : 'login-guest'" @click="toggleDropdown">
+        <div 
+          class="user-status" 
+          :class="[currentUser.logged_in ? 'login-active' : 'login-guest', isDropdownOpen ? 'dropdown-active' : '']" 
+          @click="toggleDropdown"
+        >
           {{ currentUser.logged_in ? `已登录：${currentUser.nickname}` : '未登录' }}
           <Transition name="fade">
             <div class="user-dropdown" v-if="isDropdownOpen" @click.stop>
               <template v-if="!currentUser.logged_in">
-                <button class="login-action-btn" @click="loginWithBangumi">使用 Bangumi 账号登录</button>
+                <button 
+                  class="login-action-btn" 
+                  @click="loginWithBangumi"
+                  title="使用 Bangumi 账号授权登录以获得更多权限"
+                >使用 Bangumi 账号登录</button>
               </template>
               <template v-else>
                 <div class="user-role-badge" :class="currentUser.role">
@@ -1159,21 +1192,27 @@ onUnmounted(() => {
             <h3>{{ historyType === 'global' ? '全站历史记录' : `${selectedNode?.name} 的修改记录` }}</h3>
           </div>
           <div class="history-list">
-            <div v-if="historyData.length === 0" class="no-history">暂无记录</div>
-            <div v-for="(item, idx) in historyData" :key="idx" class="history-item">
-              <span class="history-time">[{{ item.time }}]</span>
-              <span class="history-user" :class="item.role">[{{ item.nickname }}]</span>
-              <span> 进行了 </span>
-              <span class="history-action" :class="item.action">
-                {{ item.action === 'add' ? '新增' : item.action === 'edit' ? '修改' : '删除' }}
-              </span>
-              <span v-if="historyType === 'global'">
-                <span> 形象 </span>
-                <span class="history-node-link" @click="focusNode(item.node_id); showHistory = false">
-                  {{ item.node_name }}
-                </span>
-              </span>
+            <div v-if="isHistoryLoading" class="history-loading-container">
+              <div class="mini-loader"></div>
+              <span>加载中...</span>
             </div>
+            <template v-else>
+              <div v-if="historyData.length === 0" class="no-history">暂无记录</div>
+              <div v-for="(item, idx) in historyData" :key="idx" class="history-item">
+                <span class="history-time">[{{ item.time }}]</span>
+                <span class="history-user" :class="item.role">[{{ item.nickname }}]</span>
+                <span> 进行了 </span>
+                <span class="history-action" :class="item.action">
+                  {{ item.action === 'add' ? '新增' : item.action === 'edit' ? '修改' : '删除' }}
+                </span>
+                <span v-if="historyType === 'global'">
+                  <span> 形象 </span>
+                  <span class="history-node-link" @click="focusNode(item.node_id); showHistory = false">
+                    {{ item.node_name }}
+                  </span>
+                </span>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -1326,7 +1365,7 @@ onUnmounted(() => {
   border: 1px solid #1a1a2e;
 }
 
-.app-container.light-mode .login-guest:hover {
+.app-container.light-mode .login-guest:not(.dropdown-active):hover {
   background: #000;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
 }
@@ -1337,7 +1376,7 @@ onUnmounted(() => {
   border: 1px solid #247a6d;
 }
 
-.app-container.light-mode .login-active:hover {
+.app-container.light-mode .login-active:not(.dropdown-active):hover {
   background: #247a6d;
   box-shadow: 0 0 15px rgba(36, 122, 109, 0.4);
 }
@@ -1453,7 +1492,7 @@ onUnmounted(() => {
 }
 
 .user-status {
-  padding: 8px 16px;
+  padding: 0 16px;
   border-radius: 20px;
   font-size: 14px;
   cursor: pointer;
@@ -1462,30 +1501,41 @@ onUnmounted(() => {
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all 0.3s ease;
+}
+
+.user-status.dropdown-active {
+  cursor: default;
 }
 
 .user-dropdown {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 8px);
   right: 0;
   background: #1a1a2e;
   border: 1px solid #ff69b4;
   border-radius: 12px;
-  width: 240px;
+  width: 220px;
   overflow: hidden;
   z-index: 1000;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  padding: 15px;
+  padding: 10px;
   color: #fff;
 }
 
 .user-role-badge {
   text-align: center;
-  padding: 5px;
+  padding: 4px;
   border-radius: 4px;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   font-weight: bold;
-  font-size: 12px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: normal;
 }
 
 .user-role-badge.admin {
@@ -1502,37 +1552,44 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   text-align: center;
-  margin-bottom: 15px;
-  padding-bottom: 15px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .quota-item {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
+  align-items: center;
 }
 
 .quota-item span:first-child {
-  font-size: 12px;
+  font-size: 11px;
   color: #888;
 }
 
 .quota-num {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #ff69b4;
+  line-height: 1;
 }
 
 .logout-btn {
   width: 100%;
-  padding: 10px;
+  padding: 8px;
   background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 8px;
   color: #fff;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 13px;
 }
 
 .logout-btn:hover {
@@ -1594,13 +1651,13 @@ onUnmounted(() => {
   transition: all 0.3s ease;
 }
 
-.login-guest:hover {
+.login-guest:not(.dropdown-active):hover {
   background: rgba(255, 255, 255, 0.25);
   color: #fff;
   box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
-.login-active:hover {
+.login-active:not(.dropdown-active):hover {
   background: rgba(80, 227, 194, 0.3);
   box-shadow: 0 0 15px rgba(80, 227, 194, 0.3);
 }
@@ -1648,13 +1705,24 @@ onUnmounted(() => {
   color: white !important;
   text-align: center !important;
   border-radius: 4px;
-  width: calc(100% - 20px) !important;
-  margin: 10px !important;
+  width: 100% !important;
+  box-sizing: border-box;
+  margin: 0 !important; /* Removed margin top to avoid centering shift */
   font-weight: bold;
   border: none;
-  padding: 10px;
+  padding: 10px 12px;
   cursor: pointer;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: normal; /* Better for fonts than 1 in many cases */
+  transform: translateY(-1px); /* Subtle upward bias to offset font baseline */
+  white-space: normal; /* Allow text wrap if box is too small */
+}
+
+.login-action-btn:hover {
+  background: #ff1493;
+  box-shadow: 0 0 15px rgba(255, 105, 180, 0.4);
 }
 
 .app-container.light-mode .login-action-btn {
@@ -2018,9 +2086,9 @@ textarea::-webkit-scrollbar {
   right: 15px;
   width: 35px;
   height: 35px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 105, 180, 0.2);
+  color: #ff69b4;
+  border: 1px solid #ff69b4;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -2031,7 +2099,7 @@ textarea::-webkit-scrollbar {
 }
 
 .panel-inner-close-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 105, 180, 0.3);
   transform: rotate(90deg);
 }
 
@@ -2051,6 +2119,21 @@ textarea::-webkit-scrollbar {
 
 .panel-content::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1500;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .image-container {
@@ -2169,6 +2252,25 @@ textarea::-webkit-scrollbar {
 }
 
 /* History Modal */
+.history-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 15px;
+  color: #ff69b4;
+}
+
+.mini-loader {
+  border: 3px solid rgba(255, 105, 180, 0.1);
+  border-top: 3px solid #ff69b4;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 0.8s linear infinite;
+}
+
 .history-modal {
   position: fixed;
   top: 50%;
@@ -2336,17 +2438,18 @@ textarea::-webkit-scrollbar {
   
   .user-status {
     padding: 6px 12px;
-    max-width: 130px;
+    max-width: 140px;
     font-size: 11px;
     white-space: nowrap;
-    overflow: hidden;
+    overflow: visible; /* Allow dropdown to show */
     text-overflow: ellipsis;
   }
 
   .bottom-left {
-    bottom: 80px; /* Offset to avoid site-info button */
+    bottom: 20px;
     left: 10px;
-    width: calc(100% - 20px);
+    width: auto;
+    right: 120px; /* Side-by-side with site info button */
   }
   
   .search-container {
@@ -2371,6 +2474,7 @@ textarea::-webkit-scrollbar {
   .site-info-panel {
     padding: 20px;
     height: auto;
+    min-height: 250px;
     max-height: 400px;
     overflow-y: auto;
   }
@@ -2381,7 +2485,7 @@ textarea::-webkit-scrollbar {
   }
   
   .bottom-left.panel-up, .bottom-right.panel-up {
-    transform: translateY(-400px);
+    transform: translateY(-280px);
   }
 }
 </style>
