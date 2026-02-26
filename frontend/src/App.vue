@@ -21,10 +21,16 @@ const currentUser = reactive({
 
 const fetchUserInfo = async (userId = 'guest', nickname = '游客') => {
   try {
-    const response = await axios.get(`${apiBase}/api/user/info?user_id=${userId}&nickname=${nickname}`)
+    const url = `${apiBase}/api/user/info?user_id=${userId}&nickname=${encodeURIComponent(nickname)}`
+    console.log('Fetching user info from:', url)
+    const response = await axios.get(url)
     Object.assign(currentUser, response.data)
   } catch (error) {
     console.error('Failed to fetch user info:', error)
+    if (error.response) {
+      console.error('Data:', error.response.data)
+      console.error('Status:', error.response.status)
+    }
   }
 }
 

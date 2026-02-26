@@ -35,22 +35,36 @@ HISTORY_FILE = "history.json"
 def load_history():
     if not os.path.exists(HISTORY_FILE):
         return []
-    with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            return json.loads(content) if content else []
+    except (json.JSONDecodeError, IOError):
+        return []
 
 def save_history(history):
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(history, f, ensure_ascii=False, indent=2)
+    try:
+        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+    except IOError:
+        pass
 
 def load_users():
     if not os.path.exists(USERS_FILE):
         return {}
-    with open(USERS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(USERS_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            return json.loads(content) if content else {}
+    except (json.JSONDecodeError, IOError):
+        return {}
 
 def save_users(users):
-    with open(USERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(users, f, ensure_ascii=False, indent=2)
+    try:
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, ensure_ascii=False, indent=2)
+    except IOError:
+        pass
 
 def get_user_quota(user_id: str):
     users = load_users()
@@ -59,7 +73,7 @@ def get_user_quota(user_id: str):
         users[user_id] = {"last_date": today, "adds": 0, "edits": 0, "deletes": 0}
     
     user = users[user_id]
-    if user["last_date"] != today:
+    if user.get("last_date") != today:
         user["last_date"] = today
         user["adds"] = 0
         user["edits"] = 0
@@ -71,8 +85,13 @@ def get_user_quota(user_id: str):
 def load_admins():
     if not os.path.exists(ADMINS_FILE):
         return ["1173408"]
-    with open(ADMINS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(ADMINS_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            admins = json.loads(content) if content else ["1173408"]
+            return admins if isinstance(admins, list) else ["1173408"]
+    except (json.JSONDecodeError, IOError):
+        return ["1173408"]
 
 def check_permission(user_id: str, action: str):
     if user_id == "guest":
