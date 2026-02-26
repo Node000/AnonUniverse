@@ -71,7 +71,7 @@ const fetchGraphData = async () => {
   }
 }
 
-const isDarkMode = ref(true)
+const isDarkMode = ref(localStorage.getItem('theme') !== 'light')
 
 // Mouse effect states
 const mousePos = reactive({ x: 0, y: 0 })
@@ -116,6 +116,7 @@ const handleClickRipple = (e) => {
 
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value
+  localStorage.setItem('theme', isDarkMode.value ? 'dark' : 'light')
   
   if (network) {
     network.setOptions({
@@ -831,7 +832,7 @@ onUnmounted(() => {
           <Transition name="fade">
             <div class="user-dropdown" v-if="isDropdownOpen" @click.stop>
               <template v-if="!currentUser.logged_in">
-                <button @click="loginWithBangumi">使用 Bangumi 账号登录</button>
+                <button class="login-action-btn" @click="loginWithBangumi">使用 Bangumi 账号登录</button>
               </template>
               <template v-else>
                 <div class="user-role-badge" :class="currentUser.role">
@@ -1175,6 +1176,36 @@ onUnmounted(() => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
+.app-container.light-mode .user-dropdown button {
+  color: #1a1a2e;
+}
+
+.app-container.light-mode .user-dropdown button:hover {
+  background: rgba(255, 105, 180, 0.1);
+}
+
+.app-container.light-mode .login-guest {
+  background: #333;
+  color: #fff;
+  border: 1px solid #1a1a2e;
+}
+
+.app-container.light-mode .login-guest:hover {
+  background: #000;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+.app-container.light-mode .login-active {
+  background: #2d9a8a;
+  color: #fff;
+  border: 1px solid #247a6d;
+}
+
+.app-container.light-mode .login-active:hover {
+  background: #247a6d;
+  box-shadow: 0 0 15px rgba(36, 122, 109, 0.4);
+}
+
 .app-container.light-mode .search-results {
   background: #ffffff;
   color: #1a1a2e;
@@ -1424,11 +1455,24 @@ onUnmounted(() => {
   font-size: 14px;
   cursor: pointer;
   position: relative;
+  transition: all 0.3s ease;
+}
+
+.login-guest:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.login-active:hover {
+  background: rgba(80, 227, 194, 0.3);
+  box-shadow: 0 0 15px rgba(80, 227, 194, 0.3);
 }
 
 .login-guest {
-  background: rgba(128, 128, 128, 0.2);
-  color: #888;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ccc;
+  transition: all 0.3s ease;
 }
 
 .login-active {
@@ -1462,6 +1506,29 @@ onUnmounted(() => {
 }
 
 /* User Status hover removed in favor of click logic */
+
+.login-action-btn {
+  background: #ff69b4;
+  color: white !important;
+  text-align: center !important;
+  border-radius: 4px;
+  width: calc(100% - 20px) !important;
+  margin: 10px !important;
+  font-weight: bold;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  display: block;
+}
+
+.app-container.light-mode .login-action-btn {
+  background: #db3a8d; /* Deeper pink for light mode */
+}
+
+.app-container.light-mode .login-action-btn:hover {
+  background: #b82d75;
+  box-shadow: 0 0 10px rgba(219, 58, 141, 0.3);
+}
 
 .user-dropdown button {
   width: 100%;

@@ -327,8 +327,12 @@ def delete_node(node_id: int, user_id: str = "guest", nickname: str = "未知用
 def get_history(node_id: Optional[int] = None):
     history = load_history()
     if node_id is not None:
-        history = [h for h in history if h["node_id"] == node_id]
-    return history[::-1] # Return in reverse chronological order
+        # Filter by node_id and only return the last 10 records for that node
+        node_history = [h for h in history if h.get("node_id") == node_id]
+        return node_history[-10:][::-1]
+    
+    # Return global history limited to the last 100 records
+    return history[-100:][::-1]
 
 if __name__ == "__main__":
     import uvicorn
