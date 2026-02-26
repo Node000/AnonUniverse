@@ -27,6 +27,17 @@ const fetchUserInfo = async (userId = 'guest', nickname = '游客') => {
     Object.assign(currentUser, response.data)
   } catch (error) {
     console.error('Failed to fetch user info:', error)
+    // If fetch fails but we have stored credentials (not guest),
+    // we should still mark user as logged in even if quota/role info is missing
+    if (userId !== 'guest') {
+       currentUser.user_id = userId
+       currentUser.nickname = nickname
+       currentUser.logged_in = true
+       // Default fallback for failed network calls
+       if (!currentUser.role) currentUser.role = 'visitor'
+       if (!currentUser.quota) currentUser.quota = { adds: 0, edits: 0, deletes: 0 }
+    }
+    
     if (error.response) {
       console.error('Data:', error.response.data)
       console.error('Status:', error.response.status)
@@ -883,12 +894,29 @@ onMounted(async () => {
   const nicknameFromUrl = params.get('nickname')
 
   if (userIdFromUrl && nicknameFromUrl) {
+    console.log("Found auth params in URL, saving to storage:", userIdFromUrl, nicknameFromUrl);
     localStorage.setItem('user_id', userIdFromUrl)
     localStorage.setItem('nickname', nicknameFromUrl)
-    // IMPORTANT: Fetch info using the URL values directly to avoid any race condition with localStorage
+    
+    // Update local state immediately before fetching to ensure UI reflects login status
+    // independent of network latency or potential fetch failures
+    currentUser.user_id = userIdFromUrl
+    currentUser.nickname = nicknameFromUrl
+    currentUser.logged_in = true
+    
+    // IMPORTANT: Fetch info using the URL values directly to avoid any race condition
     await fetchUserInfo(userIdFromUrl, nicknameFromUrl)
-    // Clean up URL
-    window.history.replaceState({}, document.title, "/")
+    
+    // Clean up URL securely without causing a reload or navigation
+    // Only replace state if we are sure we've processed the login
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('user_id');
+      url.searchParams.delete('nickname');
+      window.history.replaceState({}, '', url.toString());
+    } catch (e) {
+      console.error("Failed to clean URL params", e);
+    }
   } else {
     // Normal load from storage
     const savedUserId = localStorage.getItem('user_id') || 'guest'

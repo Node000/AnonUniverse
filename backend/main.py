@@ -9,6 +9,7 @@ import shutil
 import uuid
 import datetime
 import httpx
+import urllib.parse
 
 app = FastAPI()
 
@@ -158,15 +159,21 @@ def login():
 
 @app.get("/api/auth/callback")
 async def auth_callback(code: str):
-    async with httpx.AsyncClient() as client:
+    # Increased timeout to prevent ReadTimeout
+    async with httpx.AsyncClient(timeout=30.0) as client:
         # 1. Exchange code for access token
-        token_resp = await client.post("https://bgm.tv/oauth/access_token", data={
-            "grant_type": "authorization_code",
-            "client_id": BGM_CLIENT_ID,
-            "client_secret": BGM_CLIENT_SECRET,
-            "code": code,
-            "redirect_uri": BGM_REDIRECT_URI
-        })
+        try:
+            token_resp = await client.post("https://bgm.tv/oauth/access_token", data={
+                "grant_type": "authorization_code",
+                "client_id": BGM_CLIENT_ID,
+                "client_secret": BGM_CLIENT_SECRET,
+                "code": code,
+                "redirect_uri": BGM_REDIRECT_URI
+            })
+            token_resp.raise_for_status()
+        except httpx.HTTPError:
+            raise HTTPException(400, "Failed to exchange token with Bangumi")
+            
         token_data = token_resp.json()
         if "access_token" not in token_data:
             raise HTTPException(400, "Failed to get access token")
@@ -175,20 +182,39 @@ async def auth_callback(code: str):
         user_id = str(token_data["user_id"])
         
         # 2. Get user profile to get the real nick (optional but good for display)
-        profile_resp = await client.get("https://api.bgm.tv/v0/me", headers={
-            "Authorization": f"Bearer {access_token}"
-        })
-        profile = profile_resp.json()
-        nickname = profile.get("nickname", access_token[:8])
+        try:
+            profile_resp = await client.get("https://api.bgm.tv/v0/me", headers={
+                "Authorization": f"Bearer {access_token}"
+            })
+            if profile_resp.status_code == 200:
+                profile = profile_resp.json()
+                nickname = profile.get("nickname", "User_" + access_token[:8])
+            else:
+                nickname = "User_" + access_token[:8]
+        except:
+            nickname = "User_" + access_token[:8]
         
         # In a real app, you'd set a secure cookie or JWT here.
         # For this setup, we redirect back to frontend with info in query params
         base_frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173/")
-        # Ensure it ends with /
-        if not base_frontend_url.endswith("/"):
-            base_frontend_url += "/"
         
-        frontend_url = f"{base_frontend_url}?user_id={user_id}&nickname={nickname}"
+        # Fix: UnicodeEncodeError - Use urllib.parse.quote for non-ASCII chars in headers
+        redirect_params = {
+            "user_id": user_id,
+            "nickname": nickname
+        }
+        query_string = urllib.parse.urlencode(redirect_params)
+        
+        # Ensure base url has ? or & correctly
+        if "?" in base_frontend_url:
+            frontend_url = f"{base_frontend_url}&{query_string}"
+        else:
+            # Handle trailing slash logic if needed, but usually query params are fine
+            if base_frontend_url.endswith("/"):
+                 frontend_url = f"{base_frontend_url}?{query_string}"
+            else:
+                 frontend_url = f"{base_frontend_url}/?{query_string}"
+
         return Response(status_code=302, headers={"Location": frontend_url})
 
 # --- Node Routes ---
