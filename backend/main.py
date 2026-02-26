@@ -163,9 +163,13 @@ async def auth_callback(code: str):
         nickname = profile.get("nickname", access_token[:8])
         
         # In a real app, you'd set a secure cookie or JWT here.
-        # For this simple setup, we'll redirect back to frontend with info in query params
-        # (Note: This is just for demonstration; use better session management for production)
-        frontend_url = f"http://localhost:5173/?user_id={user_id}&nickname={nickname}"
+        # For this setup, we redirect back to frontend with info in query params
+        base_frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173/")
+        # Ensure it ends with /
+        if not base_frontend_url.endswith("/"):
+            base_frontend_url += "/"
+        
+        frontend_url = f"{base_frontend_url}?user_id={user_id}&nickname={nickname}"
         return Response(status_code=302, headers={"Location": frontend_url})
 
 # --- Node Routes ---

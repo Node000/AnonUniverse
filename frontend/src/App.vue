@@ -4,8 +4,9 @@ import { Network } from 'vis-network'
 import { DataSet } from 'vis-data'
 import axios from 'axios'
 
-const apiBase = 'http://localhost:8000'
-const container = ref(null)
+const apiBase = import.meta.env.DEV ? 'http://localhost:8000' : ''
+const vizContainer = ref(null)
+const fileInput = ref(null)
 const loading = ref(true)
 const selectedNode = ref(null)
 const isPanelOpen = ref(false)
@@ -283,10 +284,12 @@ const focusNode = (nodeId) => {
     
     selectedNode.value = node
     isPanelOpen.value = true
-    network.focus(nodeId, {
-      scale: 1,
-      animation: { duration: 600, easingFunction: 'easeInOutQuad' }
-    })
+    if (network) {
+      network.focus(nodeId, {
+        scale: 1,
+        animation: { duration: 600, easingFunction: 'easeInOutQuad' }
+      })
+    }
   }
 }
 
@@ -693,7 +696,12 @@ const initNetwork = () => {
     }
   }
 
-  network = new Network(container.value, data, options)
+  if (vizContainer.value) {
+    network = new Network(vizContainer.value, data, options)
+  } else {
+    console.error('Viz container is not available')
+    return
+  }
 
   // View Drag Inertia Logic
   let lastTime = 0
@@ -920,7 +928,7 @@ onUnmounted(() => {
 
     <!-- Graph Container -->
     <div 
-      ref="container" 
+      ref="vizContainer" 
       class="graph-container" 
       :class="{ 'shifted': isPanelOpen }"
     ></div>
@@ -1000,7 +1008,7 @@ onUnmounted(() => {
           <template v-else>
             <h2 class="node-name">{{ isAdding ? '新增形象' : '修改形象' }}</h2>
             
-            <div class="image-container editable" @click="$refs.fileInput.click()">
+            <div class="image-container editable" @click="fileInput.click()">
               <template v-if="editForm.imagePreview">
                 <img :src="editForm.imagePreview">
                 <div class="hover-mask">
@@ -1100,7 +1108,7 @@ onUnmounted(() => {
           </div>
           <div class="info-section">
             <h4>Github仓库</h4>
-            <a href="https://github.com/AnonUniverse" target="_blank" class="info-link">AnonUniverse</a>
+            <a href="https://github.com/Node000/AnonUniverse" target="_blank" class="info-link">AnonUniverse</a>
           </div>
         </div>
       </div>
