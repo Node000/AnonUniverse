@@ -1093,16 +1093,14 @@ onUnmounted(() => {
           <div class="info-section">
             <h4>开发者</h4>
             <a href="https://space.bilibili.com/365169149" target="_blank" class="info-link">空之堇</a>
-            <a href="https://github.com/AnonUniverse" target="_blank" class="info-link">Github Project</a>
           </div>
           <div class="info-section">
             <h4>特别鸣谢</h4>
             <a href="https://space.bilibili.com/3493081661836152" target="_blank" class="info-link">璀璨水晶Crystal</a>
           </div>
           <div class="info-section">
-            <h4>备案信息</h4>
-            <a href="https://beian.miit.gov.cn/" target="_blank" class="info-link">ICP备XXXXXXXX号</a>
-            <p>© 2026 AnonUniverse</p>
+            <h4>Github仓库</h4>
+            <a href="https://github.com/AnonUniverse" target="_blank" class="info-link">AnonUniverse</a>
           </div>
         </div>
       </div>
