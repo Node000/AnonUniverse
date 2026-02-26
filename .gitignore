@@ -1,10 +1,12 @@
-node_modules/
-dist/
-.DS_Store
-.env
-
-# Backend
 backend/__pycache__/
+backend/venv/
+backend/history.json
+backend/config.json
+backend/admins.json
+backend/data.json
 backend/users.json
-backend/images/*
-!backend/images/default.png
+frontend/node_modules/
+frontend/dist/
+.env
+.vscode/
+start.sh

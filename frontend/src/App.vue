@@ -33,6 +33,14 @@ const searchQuery = ref('')
 const searchResults = ref([])
 const activeFilters = ref([])
 
+// History state
+const showHistory = ref(false)
+const historyData = ref([])
+const historyType = ref('global') // 'global' or 'node'
+
+// Site info state
+const showSiteInfo = ref(false)
+
 const editForm = reactive({
   id: null,
   name: '',
@@ -65,6 +73,47 @@ const fetchGraphData = async () => {
 
 const isDarkMode = ref(true)
 
+// Mouse effect states
+const mousePos = reactive({ x: 0, y: 0 })
+const rippleActive = ref(false)
+const ripples = ref([])
+let lastRippleTime = 0 // Track last ripple creation
+
+const handleMouseMove = (e) => {
+  mousePos.x = e.clientX
+  mousePos.y = e.clientY
+  
+  // Continuous small ripples on movement - Throttled
+  const now = Date.now()
+  if (now - lastRippleTime > 40) { // Only create ripple every 80ms
+    const id = now + Math.random()
+    ripples.value.push({
+      id,
+      x: e.clientX,
+      y: e.clientY,
+      type: 'small'
+    })
+    lastRippleTime = now
+    setTimeout(() => {
+      ripples.value = ripples.value.filter(r => r.id !== id)
+    }, 600)
+  }
+}
+
+const handleClickRipple = (e) => {
+  const id = Date.now()
+  ripples.value.push({
+    id,
+    x: e.clientX,
+    y: e.clientY,
+    type: 'large'
+  })
+  // Remove ripple after animation
+  setTimeout(() => {
+    ripples.value = ripples.value.filter(r => r.id !== id)
+  }, 1000)
+}
+
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value
   
@@ -93,6 +142,8 @@ const toggleDarkMode = () => {
 }
 
 const renderNodes = (data) => {
+  if (!data) return; // Guard against empty data
+  
   const nodes = data.map(node => {
     // Process potentially stringified JSON data from server
     let source = node.source;
@@ -125,21 +176,29 @@ const renderNodes = (data) => {
     };
   })
 
+  // Create edges but filter out any that point to non-existent nodes
+  const nodeIds = new Set(data.map(n => n.id));
   const edges = []
   data.forEach(node => {
     if (node.extension) {
       node.extension.forEach(targetId => {
-        edges.push({ 
-          id: `${node.id}-${targetId}`, 
-          from: node.id, 
-          to: targetId 
-        })
+        if (nodeIds.has(targetId)) {
+          edges.push({ 
+            id: `${node.id}-${targetId}`, 
+            from: node.id, 
+            to: targetId 
+          })
+        }
       })
     }
   })
 
-  nodesData.clear()
-  nodesData.add(nodes)
+  // Clear and update DataSet
+  nodesData.update(nodesData.getIds().filter(id => !nodeIds.has(id)).map(id => ({id, _deleted: true}))) // Mark for deletion
+  nodesData.remove(nodesData.getIds().filter(id => !nodeIds.has(id))) // Hard remove
+  
+  nodesData.update(nodes) // Update/Add new ones
+  
   edgesData.clear()
   edgesData.add(edges)
   
@@ -444,6 +503,15 @@ const removeRelated = (index) => {
 }
 
 const submitForm = async () => {
+  if (!editForm.name.trim()) {
+    alert('请输入形象名字')
+    return
+  }
+  if (!editForm.source.name.trim()) {
+    alert('请输入出处作品名字')
+    return
+  }
+
   const formData = new FormData()
   formData.append('name', editForm.name)
   
@@ -455,6 +523,7 @@ const submitForm = async () => {
   formData.append('tags', JSON.stringify(editForm.tags.split(',').map(t => t.trim())))
   formData.append('extension', JSON.stringify(isAdding.value ? [] : editForm.extension))
   formData.append('user_id', currentUser.user_id)
+  formData.append('nickname', currentUser.nickname)
   if (parentIdForNewNode.value) {
     formData.append('parent_id', parentIdForNewNode.value)
   }
@@ -482,7 +551,7 @@ const deleteNode = async () => {
   const confirmName = prompt(`你确定要删除 ${selectedNode.value.name} 吗？请输入名字确认删除`)
   if (confirmName === selectedNode.value.name) {
     try {
-      await axios.delete(`${apiBase}/api/nodes/${selectedNode.value.id}?user_id=${currentUser.user_id}`)
+      await axios.delete(`${apiBase}/api/nodes/${selectedNode.value.id}?user_id=${currentUser.user_id}&nickname=${currentUser.nickname}`)
       await fetchGraphData()
       await fetchUserInfo(currentUser.user_id, currentUser.nickname)
       isPanelOpen.value = false
@@ -514,10 +583,39 @@ const toggleDropdown = (e) => {
   e.stopPropagation()
   if (isDropdownOpen.value) {
     isDropdownOpen.value = false
-    // Delay slightly to allow animation out if needed, but not necessary with v-if/transition
   } else {
     isDropdownOpen.value = true
   }
+}
+
+const toggleHistory = async (nodeId = null) => {
+  if (showHistory.value) {
+    showHistory.value = false
+    return
+  }
+  await fetchHistory(nodeId)
+}
+
+const fetchHistory = async (nodeId = null) => {
+  try {
+    const url = nodeId ? `${apiBase}/api/history?node_id=${nodeId}` : `${apiBase}/api/history`
+    const response = await axios.get(url)
+    historyData.value = response.data
+    historyType.value = nodeId ? 'node' : 'global'
+    showHistory.value = true
+  } catch (error) {
+    console.error('Failed to fetch history:', error)
+  }
+}
+
+const toggleSiteInfo = (e) => {
+  if (e) e.stopPropagation()
+  showSiteInfo.value = !showSiteInfo.value
+}
+
+const closePopups = () => {
+  showHistory.value = false
+  showSiteInfo.value = false
 }
 
 const initNetwork = () => {
@@ -544,7 +642,10 @@ const initNetwork = () => {
     },
     physics: {
       enabled: true,
-      stabilization: false,
+      stabilization: {
+        enabled: true,
+        iterations: 1000
+      },
       barnesHut: {
         gravitationalConstant: -1000,
         centralGravity: 0.02,
@@ -565,6 +666,57 @@ const initNetwork = () => {
   }
 
   network = new Network(container.value, data, options)
+
+  // View Drag Inertia Logic
+  let lastTime = 0
+  let lastPos = { x: 0, y: 0 }
+  let velocity = { x: 0, y: 0 }
+  let inertiaFrame = null
+
+  network.on('dragStart', () => {
+    if (inertiaFrame) cancelAnimationFrame(inertiaFrame)
+    velocity = { x: 0, y: 0 }
+  })
+
+  network.on('dragging', () => {
+    const now = Date.now()
+    const currentView = network.getViewPosition()
+    if (lastTime > 0) {
+      const dt = now - lastTime
+      if (dt > 0) {
+        // Calculate velocity (change in view position per ms)
+        velocity.x = (currentView.x - lastPos.x) / dt
+        velocity.y = (currentView.y - lastPos.y) / dt
+      }
+    }
+    lastPos = { ...currentView }
+    lastTime = now
+  })
+
+  network.on('dragEnd', () => {
+    let friction = 0.985 // High friction (less speed loss per frame)
+    const step = () => {
+      // Stop when speed is very low
+      if (Math.abs(velocity.x) < 0.01 && Math.abs(velocity.y) < 0.01) {
+        return
+      }
+      
+      const currentView = network.getViewPosition()
+      network.moveTo({
+        position: {
+          x: currentView.x + velocity.x,
+          y: currentView.y + velocity.y
+        },
+        animation: false
+      })
+      
+      velocity.x *= friction
+      velocity.y *= friction
+      inertiaFrame = requestAnimationFrame(step)
+    }
+    inertiaFrame = requestAnimationFrame(step)
+    lastTime = 0 // Reset for next drag
+  })
 
   network.on('click', (params) => {
     if (params.nodes.length > 0) {
@@ -624,14 +776,29 @@ onMounted(async () => {
   await fetchGraphData()
   initNetwork()
 
-  window.addEventListener('click', () => {
+  window.addEventListener('click', (e) => {
     isDropdownOpen.value = false
+    closePopups()
+    handleClickRipple(e)
   })
+  
+  window.addEventListener('mousemove', handleMouseMove)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('mousemove', handleMouseMove)
 })
 </script>
 
 <template>
   <div class="app-container" :class="{ 'light-mode': !isDarkMode }">
+    <!-- Mouse Effects -->
+    <div v-for="ripple in ripples" :key="ripple.id" 
+         class="click-ripple" 
+         :class="ripple.type"
+         :style="{ left: ripple.x + 'px', top: ripple.y + 'px' }">
+    </div>
+
     <!-- Loading Animation -->
     <div v-if="loading" class="loading-overlay">
       <div class="loader"></div>
@@ -640,14 +807,25 @@ onMounted(async () => {
 
     <!-- UI Buttons -->
     <div class="ui-layer top-left">
-      <button class="home-btn pink-btn" @click="resetView">回到中心</button>
+      <div class="left-controls">
+        <button class="home-btn pink-btn" @click="resetView">回到中心</button>
+        <button class="history-btn pink-btn" @click.stop="toggleHistory()">全站历史</button>
+        <button class="theme-toggle" @click="toggleDarkMode" :class="{ 'dark-mode-btn': isDarkMode }">
+          <!-- Sun (Light Mode) Icon -->
+          <svg v-if="!isDarkMode" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5" />
+            <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M17.66 6.34l1.42-1.42" />
+          </svg>
+          <!-- Moon (Dark Mode) Icon -->
+          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div class="ui-layer top-right">
       <div class="header-controls">
-        <button class="theme-toggle pink-btn" @click="toggleDarkMode" :class="{ 'dark-mode-btn': isDarkMode }">
-          {{ isDarkMode ? '☀' : '🌙' }}
-        </button>
         <div class="user-status" :class="currentUser.logged_in ? 'login-active' : 'login-guest'" @click="toggleDropdown">
           {{ currentUser.logged_in ? `已登录：${currentUser.nickname}` : '未登录' }}
           <Transition name="fade">
@@ -681,7 +859,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="ui-layer bottom-left">
+    <div class="ui-layer bottom-left" :class="{ 'panel-up': showSiteInfo }">
       <div class="search-container">
         <div class="active-filters">
           <span v-for="tag in activeFilters" :key="tag" class="filter-tag">
@@ -708,6 +886,10 @@ onMounted(async () => {
       </div>
     </div>
 
+    <div class="ui-layer bottom-right" :class="{ 'panel-up': showSiteInfo }">
+      <button class="info-btn pink-btn" @click.stop="toggleSiteInfo">网站信息</button>
+    </div>
+
     <!-- Graph Container -->
     <div 
       ref="container" 
@@ -718,7 +900,18 @@ onMounted(async () => {
     <!-- Right Panel -->
     <Transition name="slide">
       <div v-if="isPanelOpen" class="side-panel">
-        <button class="close-btn" @click="isPanelOpen = false">×</button>
+        
+        <!-- Node History Button (Pink, Round, SVG Icon) -->
+        <button 
+          v-if="!isEditing && !isAdding" 
+          class="node-update-history-btn-round" 
+          title="更新记录"
+          @click.stop="toggleHistory(selectedNode.id)"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
         
         <div class="panel-content">
           <!-- View Mode -->
@@ -820,6 +1013,56 @@ onMounted(async () => {
       </div>
     </Transition>
 
+    <!-- History Modal -->
+    <Transition name="fade">
+      <div v-if="showHistory" class="modal-overlay" @click="showHistory = false">
+        <div class="history-modal" @click.stop>
+          <div class="modal-header">
+            <h3>{{ historyType === 'global' ? '全站历史记录' : `${selectedNode?.name} 的修改记录` }}</h3>
+          </div>
+          <div class="history-list">
+            <div v-if="historyData.length === 0" class="no-history">暂无记录</div>
+            <div v-for="(item, idx) in historyData" :key="idx" class="history-item">
+              <span class="history-time">[{{ item.time }}]</span>
+              <span class="history-user" :class="item.role">[{{ item.nickname }}]</span>
+              <span> 进行了 </span>
+              <span class="history-action" :class="item.action">
+                {{ item.action === 'add' ? '新增' : item.action === 'edit' ? '修改' : '删除' }}
+              </span>
+              <span v-if="historyType === 'global'">
+                <span> 形象 </span>
+                <span class="history-node-link" @click="focusNode(item.node_id); showHistory = false">
+                  {{ item.node_name }}
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Site Info Bottom Panel -->
+    <Transition name="slide-up">
+      <div v-if="showSiteInfo" class="site-info-panel" @click.stop>
+        <div class="site-info-grid">
+          <div class="info-section">
+            <h4>开发者</h4>
+            <a href="https://space.bilibili.com/365169149" target="_blank" class="info-link">空之堇</a>
+            <a href="https://github.com/AnonUniverse" target="_blank" class="info-link">Github Project</a>
+          </div>
+          <div class="info-section">
+            <h4>特别鸣谢</h4>
+            <a href="https://space.bilibili.com/3493081661836152" target="_blank" class="info-link">璀璨水晶Crystal</a>
+          </div>
+          <div class="info-section">
+            <h4>备案信息</h4>
+            <a href="https://beian.miit.gov.cn/" target="_blank" class="info-link">ICP备XXXXXXXX号</a>
+            <p>© 2026 AnonUniverse</p>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <!-- Crop Modal -->
     <div v-if="showCropModal" class="crop-modal-overlay">
       <div class="crop-modal">
@@ -854,6 +1097,52 @@ onMounted(async () => {
   transition: background 0.5s ease, color 0.5s ease;
 }
 
+/* Mouse Effects */
+.click-ripple {
+  position: fixed;
+  border: 1.5px solid #ff69b4;
+  background: transparent;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+}
+
+.click-ripple.small {
+  animation: small-ripple-animation 0.6s ease-out forwards;
+}
+
+.click-ripple.large {
+  border-width: 2px;
+  animation: large-ripple-animation 1s ease-out forwards;
+}
+
+@keyframes small-ripple-animation {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 0.5;
+  }
+  100% {
+    width: 30px;
+    height: 30px;
+    opacity: 0;
+  }
+}
+
+@keyframes large-ripple-animation {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 0.8;
+  }
+  100% {
+    width: 120px;
+    height: 120px;
+    opacity: 0;
+  }
+}
+
 .app-container.light-mode {
   background: #f0f0f5;
   color: #1a1a2e;
@@ -872,9 +1161,11 @@ onMounted(async () => {
   color: #1a1a2e;
 }
 
+.app-container.light-mode .input-group input,
 .app-container.light-mode .pair-input input {
   background: #fdfdfd;
   color: #1a1a2e;
+  border-color: rgba(255, 105, 180, 0.5);
 }
 
 .app-container.light-mode .user-dropdown {
@@ -889,10 +1180,25 @@ onMounted(async () => {
   color: #1a1a2e;
 }
 
+.bottom-left, .bottom-right {
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.bottom-left.panel-up, .bottom-right.panel-up {
+  transform: translateY(-200px); /* Move up when panel shows */
+}
+
 .app-container.light-mode .search-container input {
   background: rgba(255, 255, 255, 0.8);
   color: #1a1a2e;
   border: 1px solid #ff69b4;
+}
+
+.app-container.light-mode .history-modal,
+.app-container.light-mode .site-info-panel {
+  background: #ffffff;
+  color: #1a1a2e;
+  box-shadow: 0 0 30px rgba(0,0,0,0.1);
 }
 
 .graph-container {
@@ -942,6 +1248,7 @@ onMounted(async () => {
 .top-left { top: 20px; left: 20px; }
 .top-right { top: 20px; right: 20px; display: flex; align-items: flex-start; gap: 10px; }
 .bottom-left { bottom: 20px; left: 20px; }
+.bottom-right { bottom: 20px; right: 20px; }
 
 .header-controls {
   display: flex;
@@ -951,19 +1258,27 @@ onMounted(async () => {
 }
 
 .theme-toggle {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 20px;
-  border-radius: 50%;
-  padding: 0;
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  border-radius: 50% !important;
+  padding: 0 !important; /* Force remove padding from pink-btn */
   border: 1px solid #ff69b4;
   background: rgba(255, 255, 255, 0.1);
   color: #ff69b4;
   cursor: pointer;
   transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.theme-toggle svg {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  display: block;
 }
 
 .theme-toggle:hover {
@@ -1058,16 +1373,17 @@ onMounted(async () => {
   color: #ff69b4;
 }
 
-/* Animations */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+/* Transitions */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
+.left-controls {
+  display: flex;
+  gap: 15px; /* Added spacing between buttons */
 }
 
 .pink-btn {
@@ -1084,6 +1400,22 @@ onMounted(async () => {
 .pink-btn:hover {
   background: rgba(255, 105, 180, 0.3);
   box-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
+}
+
+.grey-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  background: rgba(240, 240, 240, 0.8);
+  color: #333;
+  border: 1px solid #ccc;
+  transition: all 0.3s ease;
+}
+
+.grey-btn:hover {
+  background: #ffffff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .user-status {
@@ -1431,9 +1763,34 @@ onMounted(async () => {
   cursor: pointer;
 }
 
+.node-update-history-btn-round {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  width: 35px;
+  height: 35px;
+  background: rgba(255, 105, 180, 0.2);
+  color: #ff69b4;
+  border: 1px solid #ff69b4;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  transition: all 0.3s;
+  z-index: 201;
+}
+
+.node-update-history-btn-round:hover {
+  background: rgba(255, 105, 180, 0.3);
+  transform: scale(1.1);
+}
+
 .panel-content {
   overflow-y: auto;
   flex: 1;
+  padding-top: 20px; /* Space for buttons */
 }
 
 .image-container {
@@ -1441,6 +1798,7 @@ onMounted(async () => {
   aspect-ratio: 1;
   border-radius: 12px;
   overflow: hidden;
+  margin-top: 15px; /* Added spacing to avoid overlap */
   margin-bottom: 20px;
   border: 2px solid #ff69b4;
 }
@@ -1510,6 +1868,159 @@ onMounted(async () => {
 .btn.add { background: #50e3c2; }
 .btn.delete { background: #d0021b; }
 
+.node-info-footer {
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.history-icon-btn {
+  background: none;
+  border: 1px solid rgba(255, 105, 180, 0.5);
+  color: #ff69b4;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.history-icon-btn:hover {
+  background: rgba(255, 105, 180, 0.1);
+  box-shadow: 0 0 10px rgba(255, 105, 180, 0.3);
+}
+
+/* History Modal */
+.history-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 650px;
+  max-height: 70vh;
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 105, 180, 0.4);
+  border-radius: 16px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 60px rgba(0,0,0,0.6);
+  padding: 10px;
+  color: #ffffff; /* Ensure text is white in dark mode */
+}
+
+.app-container.light-mode .history-modal {
+  background: #ffffff;
+  color: #1a1a2e; /* Black text for light mode */
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #ff69b4;
+  font-size: 1.3rem;
+}
+
+.history-list {
+  padding: 10px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.history-item {
+  padding: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.history-time {
+  color: #888;
+  margin-right: 12px;
+}
+
+.history-user {
+  font-weight: bold;
+}
+
+.history-user.admin {
+  color: #00ffff; /* Cyan for Admin */
+}
+
+.history-user.user {
+  color: #ff69b4; /* Pink for regular users */
+}
+
+.history-action.add { color: #50fa7b; }
+.history-action.edit { color: #f1fa8c; }
+.history-action.delete { color: #ff5555; }
+
+.history-node-link {
+  color: #ff69b4;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Site Info Panel (Slide up) */
+.site-info-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1a1a2e;
+  border-top: 1px solid rgba(255, 105, 180, 0.5);
+  z-index: 1000;
+  padding: 40px;
+  color: #fff;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+  height: 200px; /* Fixed height for consistent sliding */
+  box-sizing: border-box;
+}
+
+.site-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 column layout */
+  gap: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.info-section h4 {
+  color: #ff69b4;
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  border-left: 3px solid #ff69b4;
+  padding-left: 10px;
+}
+
+.info-section p, .info-section a {
+  color: #bbb;
+  font-size: 0.95rem;
+  text-decoration: none;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.info-section a:hover {
+  color: #ff1493;
+}
+
+.legal-info {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  font-size: 0.8rem;
+  color: #666;
+}
+
 /* Transition */
 .slide-enter-active,
 .slide-leave-active {
@@ -1519,5 +2030,12 @@ onMounted(async () => {
 .slide-enter-from,
 .slide-leave-to {
   transform: translateX(100%);
+}
+
+.slide-up-enter-active, .slide-up-leave-active {
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+.slide-up-enter-from, .slide-up-leave-to {
+  transform: translateY(100%);
 }
 </style>

@@ -7,7 +7,7 @@ import json
 import os
 import shutil
 import uuid
-from datetime import date
+import datetime
 import httpx
 
 app = FastAPI()
@@ -22,14 +22,25 @@ app.add_middleware(
 )
 
 # Bangumi OAuth Config
-BGM_CLIENT_ID = "bgm5638699e79a509c04"
-BGM_CLIENT_SECRET = "bc249e0d9b9dd71e5d225253e5cc23a2"
-BGM_REDIRECT_URI = "http://localhost:8000/api/auth/callback" # This should match your Bangumi App settings
+BGM_CLIENT_ID = os.getenv("BGM_CLIENT_ID", "default_id")
+BGM_CLIENT_SECRET = os.getenv("BGM_CLIENT_SECRET", "default_secret")
+BGM_REDIRECT_URI = os.getenv("BGM_REDIRECT_URI", "http://localhost:8000/api/auth/callback")
 
 DATA_FILE = "data.json"
 IMAGES_DIR = "images"
 USERS_FILE = "users.json"
 ADMINS_FILE = "admins.json"
+HISTORY_FILE = "history.json"
+
+def load_history():
+    if not os.path.exists(HISTORY_FILE):
+        return []
+    with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_history(history):
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
 
 def load_users():
     if not os.path.exists(USERS_FILE):
@@ -43,7 +54,7 @@ def save_users(users):
 
 def get_user_quota(user_id: str):
     users = load_users()
-    today = str(date.today())
+    today = str(datetime.date.today())
     if user_id not in users:
         users[user_id] = {"last_date": today, "adds": 0, "edits": 0, "deletes": 0}
     
@@ -76,8 +87,25 @@ def check_permission(user_id: str, action: str):
     if action == "delete" and user["deletes"] >= 1: return False
     return True
 
-def record_action(user_id: str, action: str):
+def record_action(user_id: str, action: str, node_id: int, node_name: str, nickname: str = "未知用户"):
+    # Record history
+    history = load_history()
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     admins = load_admins()
+    role = "admin" if user_id in admins else "user"
+    
+    history.append({
+        "time": now,
+        "user_id": user_id,
+        "nickname": nickname,
+        "role": role,
+        "node_id": node_id,
+        "node_name": node_name,
+        "action": action
+    })
+    save_history(history)
+
+    # Record quota
     if user_id in admins: return
     users = load_users()
     if action == "add": users[user_id]["adds"] += 1
@@ -172,6 +200,7 @@ def add_node(
     x: float = Form(0.0),
     y: float = Form(0.0),
     user_id: str = Form("guest"),
+    nickname: str = Form("未知用户"),
     parent_id: Optional[int] = Form(None),
     image: Optional[UploadFile] = File(None)
 ):
@@ -218,7 +247,7 @@ def add_node(
     nodes.append(new_node)
     data["nodes"] = nodes
     save_data(data)
-    record_action(user_id, "add")
+    record_action(user_id, "add", new_node["id"], new_node["name"], nickname)
     return new_node
 
 @app.put("/api/nodes/{node_id}")
@@ -230,6 +259,7 @@ def update_node(
     tags: str = Form(...),
     extension: str = Form(...),
     user_id: str = Form("guest"),
+    nickname: str = Form("未知用户"),
     image: Optional[UploadFile] = File(None)
 ):
     if user_id == "guest":
@@ -261,11 +291,11 @@ def update_node(
     node["extension"] = json.loads(extension)
     
     save_data(data)
-    record_action(user_id, "edit")
+    record_action(user_id, "edit", node["id"], node["name"], nickname)
     return node
 
 @app.delete("/api/nodes/{node_id}")
-def delete_node(node_id: int, user_id: str = "guest"):
+def delete_node(node_id: int, user_id: str = "guest", nickname: str = "未知用户"):
     if user_id == "guest":
         raise HTTPException(403, "游客状态-请登录后进行删除")
     if not check_permission(user_id, "delete"):
@@ -286,11 +316,19 @@ def delete_node(node_id: int, user_id: str = "guest"):
         if "connections" in n and node_id in n["connections"]:
             n["connections"].remove(node_id)
             
+    deleted_name = nodes[node_idx]["name"]
     nodes.pop(node_idx)
     data["nodes"] = nodes
     save_data(data)
-    record_action(user_id, "delete")
+    record_action(user_id, "delete", node_id, deleted_name, nickname)
     return {"message": "Node deleted successfully"}
+
+@app.get("/api/history")
+def get_history(node_id: Optional[int] = None):
+    history = load_history()
+    if node_id is not None:
+        history = [h for h in history if h["node_id"] == node_id]
+    return history[::-1] # Return in reverse chronological order
 
 if __name__ == "__main__":
     import uvicorn

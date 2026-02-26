@@ -4,16 +4,31 @@
       "id": 1,
       "name": "千早爱音",
       "image": "/images/default.png",
-      "source": "{\"name\":\"BanG Dream! It's MyGO!!!!!\",\"link\":\"https://bang-dream.com/mygo\"}",
-      "related": "[{\"name\":\"MyGO!!!!!\",\"link\":\"\"}]",
+      "source": {
+        "name": "BanG Dream! It's MyGO!!!!!",
+        "link": "https://bang-dream.com/mygo"
+      },
+      "related": [
+        {
+          "name": "MyGO!!!!!",
+          "link": ""
+        },
+        {
+          "name": "123",
+          "link": ""
+        },
+        {
+          "name": "456",
+          "link": ""
+        }
+      ],
       "tags": [
         "原作",
         "主唱"
       ],
       "extension": [
         2,
-        3,
-        4
+        3
       ],
       "x": 0,
       "y": 0
@@ -59,27 +74,6 @@
       ],
       "extension": [],
       "x": -216,
-      "y": 125
-    },
-    {
-      "id": 4,
-      "name": "爱音（表情包）",
-      "image": "/images/default.png",
-      "source": {
-        "name": "表情包",
-        "link": ""
-      },
-      "related": [
-        {
-          "name": "群聊",
-          "link": ""
-        }
-      ],
-      "tags": [
-        "表情包"
-      ],
-      "extension": [],
-      "x": 216,
       "y": 125
     }
   ]
