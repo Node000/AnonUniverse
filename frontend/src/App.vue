@@ -132,20 +132,20 @@ const deleteDisabledReason = computed(() => {
 const canEditSelectedNode = computed(() => {
   if (!selectedNode.value || !currentUser.logged_in) return false
   if (currentUser.role === 'admin') return true
-  return currentUser.quota && currentUser.quota.edits < 1
+  return currentUser.quota && currentUser.quota.edits < 10
 })
 
 const canAddNode = computed(() => {
   if (!currentUser.logged_in) return false
   if (currentUser.role === 'admin') return true
-  return currentUser.quota && currentUser.quota.adds < 1
+  return currentUser.quota && currentUser.quota.adds < 10
 })
 
 const editButtonsDisabledReason = computed(() => {
   if (!currentUser.logged_in) return '请登录后操作'
   if (currentUser.role !== 'admin') {
-    if (isAdding.value && currentUser.quota.adds >= 1) return '今日新增配额已用完'
-    if (!isAdding.value && currentUser.quota.edits >= 1) return '今日修改配额已用完'
+    if (isAdding.value && currentUser.quota.adds >= 10) return '今日新增配额已用完'
+    if (!isAdding.value && currentUser.quota.edits >= 10) return '今日修改配额已用完'
   }
   return ''
 })
@@ -1669,7 +1669,7 @@ onUnmounted(() => {
           <div style="color: #eee; line-height: 1.8; font-size: 0.95rem;">
             <p>1. 本站用于记录千早爱音在中文互联网的各种形象。</p>
             <p>2. 点击节点可以查看该形象的详细信息。</p>
-            <p>3. 用户在登录后可以进行新增、修改、删除与申请知名二创，每种操作每日限1次。</p>
+            <p>3. 用户在登录后，每日可以进行10次新增、10次修改、1次删除与1次申请知名二创</p>
             <p>4. 申请“知名二创”的规则是：该形象作品为剧情性二创，且B站播放量 ≥ 20w。</p>
             <p>5. 欢迎各位观众与作者对本网站的内容进行更新！</p>
           </div>

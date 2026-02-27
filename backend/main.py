@@ -121,8 +121,8 @@ def check_permission(user_id: str, action: str):
         return True
     
     user = get_user_quota(user_id)
-    if action == "add" and user["adds"] >= 1: return False
-    if action == "edit" and user["edits"] >= 1: return False
+    if action == "add" and user["adds"] >= 10: return False
+    if action == "edit" and user["edits"] >= 10: return False
     if action == "delete" and user["deletes"] >= 1: return False
     if action == "apply" and user["applies"] >= 1: return False
     return True
@@ -278,7 +278,7 @@ def add_node(
     if user_id == "guest":
         raise HTTPException(403, "游客状态-请登录后进行新增")
     if not check_permission(user_id, "add"):
-        raise HTTPException(403, "普通用户-你今天已经新增了一个爱音了，明天再来吧")
+        raise HTTPException(403, "普通用户-你今天已经新增了10个爱音了，明天再来吧")
     
     data = load_data()
     nodes = data.get("nodes", [])
@@ -338,7 +338,7 @@ def update_node(
     if user_id == "guest":
         raise HTTPException(403, "游客状态-请登录后进行修改")
     if not check_permission(user_id, "edit"):
-        raise HTTPException(403, "普通用户-你今天已经修改了一个爱音了，明天再来吧")
+        raise HTTPException(403, "普通用户-你今天已经修改了10个爱音了，明天再来吧")
         
     data = load_data()
     nodes = data.get("nodes", [])
