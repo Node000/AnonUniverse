@@ -65,6 +65,7 @@ const showFamous = ref(false)
 const pendingApplications = ref([])
 const showApplyFamousModal = ref(false)
 const showPendingApplicationsModal = ref(false)
+const showGuideModal = ref(false)
 
 const canApplyFamous = computed(() => {
   if (!currentUser.logged_in) return false
@@ -707,23 +708,40 @@ const submitForm = async () => {
       // For adding, we might need to refresh to get correct layout/edges, or we can manually add it.
       // Refreshing is safer for new nodes to ensure links are correct.
       await fetchGraphData()
+      
+      // 新增节点后自动激活物理引擎以布局新节点
+      if (network) {
+        network.setOptions({ physics: { enabled: true } });
+        network.startSimulation();
+      }
     } else {
       const resp = await axios.put(`${apiBase}/api/nodes/${editForm.id}`, formData)
       resultNode = resp.data;
       
+      // Get current position to prevent jumping back to initial coordinates
+      const currentPos = network ? network.getPositions([resultNode.id])[resultNode.id] : null;
+      
       // Update local data without full refresh
+      const finalImageUrl = resultNode.image 
+        ? (resultNode.image.startsWith('http') ? resultNode.image : `${apiBase}${resultNode.image}`) 
+        : `${apiBase}/images/default.png`;
+        
       nodesData.update({
+        ...resultNode,
         id: resultNode.id,
         label: resultNode.name,
-        image: resultNode.image.startsWith('http') ? resultNode.image : `${apiBase}${resultNode.image}`,
-        // Keep other properties that might be used by vis-network or internal logic
-        // We also need to update the data source for the detail panel which reads from selectedNode
+        image: finalImageUrl,
+        x: currentPos ? currentPos.x : resultNode.x,
+        y: currentPos ? currentPos.y : resultNode.y
       })
       
       // Update selectedNode which updates the side panel
       if (selectedNode.value && selectedNode.value.id === resultNode.id) {
          Object.assign(selectedNode.value, resultNode);
       }
+
+      // Re-apply filters to ensure new tags/content are searchable
+      applyFilters()
       
       // If we edited relations, edges might need update.
       // Simple edit of name/image doesn't change edges.
@@ -765,6 +783,13 @@ const deleteNode = async () => {
     try {
       await axios.delete(`${apiBase}/api/nodes/${selectedNode.value.id}?user_id=${currentUser.user_id}&nickname=${currentUser.nickname}`)
       await fetchGraphData()
+      
+      // 删除节点后激活物理引擎以重新排列剩余节点
+      if (network) {
+        network.setOptions({ physics: { enabled: true } });
+        network.startSimulation();
+      }
+      
       await fetchUserInfo(currentUser.user_id, currentUser.nickname)
       isPanelOpen.value = false
     } catch (error) {
@@ -937,6 +962,14 @@ const toggleSiteInfo = (e) => {
 const closePopups = () => {
   showHistory.value = false
   showSiteInfo.value = false
+}
+
+const closeGuide = () => {
+  showGuideModal.value = false
+  // 设置 cookie，到期时间 30 天
+  const date = new Date()
+  date.setTime(date.getTime() + (30 * 24 * 60 * 60 * 1000))
+  document.cookie = `guide_seen=true; expires=${date.toUTCString()}; path=/`
 }
 
 const initNetwork = () => {
@@ -1244,6 +1277,13 @@ onMounted(async () => {
   await fetchGraphData()
   initNetwork()
 
+  // 漫游指南：检查是否首次进入
+  if (!document.cookie.includes('guide_seen=true')) {
+    setTimeout(() => {
+      showGuideModal.value = true
+    }, 1500)
+  }
+
   window.addEventListener('click', (e) => {
     isDropdownOpen.value = false
     closePopups()
@@ -1443,9 +1483,9 @@ onUnmounted(() => {
 
             <div class="image-container">
               <img 
-                :src="selectedNode.image.startsWith('http') ? selectedNode.image : `${apiBase}${selectedNode.image}`" 
+                :src="selectedNode.image ? (selectedNode.image.startsWith('http') ? selectedNode.image : `${apiBase}${selectedNode.image}`) : `${apiBase}/images/default.png`" 
                 :alt="selectedNode.name"
-                onerror="this.src='https://via.placeholder.com/200/ff69b4/ffffff?text=?'"
+                :onerror="`this.src='${apiBase}/images/default.png'`"
               >
             </div>
             
@@ -1616,6 +1656,25 @@ onUnmounted(() => {
                 </span>
               </div>
             </template>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Guide Modal -->
+    <Transition name="fade">
+      <div v-if="showGuideModal" class="modal-overlay" @click="closeGuide">
+        <div class="guide-modal" @click.stop style="background: #1a1a2e; border: 2px solid #ff69b4; border-radius: 15px; width: 450px; max-width: 90vw; padding: 30px; box-shadow: 0 0 30px rgba(255, 105, 180, 0.4);">
+          <h2 style="color: #ff69b4; text-align: center; margin-bottom: 25px; font-size: 1.5rem;">千早爱音宇宙漫游指南</h2>
+          <div style="color: #eee; line-height: 1.8; font-size: 0.95rem;">
+            <p>1. 本站用于记录千早爱音在中文互联网的各种形象。</p>
+            <p>2. 点击节点可以查看该形象的详细信息。</p>
+            <p>3. 用户在登录后可以进行新增、修改、删除与申请知名二创，每种操作每日限1次。</p>
+            <p>4. 申请“知名二创”的规则是：该形象作品为剧情性二创，且B站播放量 ≥ 20w。</p>
+            <p>5. 欢迎各位观众与作者对本网站的内容进行更新！</p>
+          </div>
+          <div style="display: flex; justify-content: center; margin-top: 30px;">
+            <button class="btn confirm" style="padding: 10px 40px; font-size: 1rem;" @click="closeGuide">出发！</button>
           </div>
         </div>
       </div>
