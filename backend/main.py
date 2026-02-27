@@ -32,6 +32,24 @@ IMAGES_DIR = "images"
 USERS_FILE = "users.json"
 ADMINS_FILE = "admins.json"
 HISTORY_FILE = "history.json"
+APPLICATIONS_FILE = "applications.json"
+
+def load_applications():
+    if not os.path.exists(APPLICATIONS_FILE):
+        return []
+    try:
+        with open(APPLICATIONS_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            return json.loads(content) if content else []
+    except (json.JSONDecodeError, IOError):
+        return []
+
+def save_applications(apps):
+    try:
+        with open(APPLICATIONS_FILE, "w", encoding="utf-8") as f:
+            json.dump(apps, f, ensure_ascii=False, indent=2)
+    except IOError:
+        pass
 
 def load_history():
     if not os.path.exists(HISTORY_FILE):
@@ -71,7 +89,7 @@ def get_user_quota(user_id: str):
     users = load_users()
     today = str(datetime.date.today())
     if user_id not in users:
-        users[user_id] = {"last_date": today, "adds": 0, "edits": 0, "deletes": 0}
+        users[user_id] = {"last_date": today, "adds": 0, "edits": 0, "deletes": 0, "applies": 0}
     
     user = users[user_id]
     if user.get("last_date") != today:
@@ -79,6 +97,7 @@ def get_user_quota(user_id: str):
         user["adds"] = 0
         user["edits"] = 0
         user["deletes"] = 0
+        user["applies"] = 0
     
     save_users(users)
     return user
@@ -105,6 +124,7 @@ def check_permission(user_id: str, action: str):
     if action == "add" and user["adds"] >= 1: return False
     if action == "edit" and user["edits"] >= 1: return False
     if action == "delete" and user["deletes"] >= 1: return False
+    if action == "apply" and user["applies"] >= 1: return False
     return True
 
 def record_action(user_id: str, action: str, node_id: int, node_name: str, nickname: str = "未知用户"):
@@ -131,6 +151,7 @@ def record_action(user_id: str, action: str, node_id: int, node_name: str, nickn
     if action == "add": users[user_id]["adds"] += 1
     elif action == "edit": users[user_id]["edits"] += 1
     elif action == "delete": users[user_id]["deletes"] += 1
+    elif action == "apply_famous": users[user_id]["applies"] += 1
     save_users(users)
 
 # Ensure images directory exists
@@ -431,6 +452,108 @@ def get_history(node_id: Optional[int] = None):
     
     # Return global history limited to the last 100 records
     return history[-100:][::-1]
+
+@app.get("/api/applications")
+def get_applications(user_id: str = "guest"):
+    if user_id == "guest":
+        raise HTTPException(403, "Unauthorized")
+    admins = load_admins()
+    if user_id not in admins:
+        raise HTTPException(403, "Unauthorized")
+    return load_applications()
+
+@app.post("/api/applications")
+def apply_famous(
+    node_id: int = Form(...),
+    user_id: str = Form("guest"),
+    nickname: str = Form("未知用户")
+):
+    if user_id == "guest":
+        raise HTTPException(403, "请登录后操作")
+    if not check_permission(user_id, "apply"):
+        raise HTTPException(403, "今日申请次数已用完")
+        
+    data = load_data()
+    nodes = data.get("nodes", [])
+    node = next((n for n in nodes if n["id"] == node_id), None)
+    if not node:
+        raise HTTPException(404, "Node not found")
+        
+    apps = load_applications()
+    if any(a["node_id"] == node_id for a in apps):
+        raise HTTPException(400, "该节点已在申请中")
+        
+    new_app = {
+        "id": str(uuid.uuid4()),
+        "node_id": node_id,
+        "node_name": node["name"],
+        "user_id": user_id,
+        "nickname": nickname,
+        "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    apps.append(new_app)
+    save_applications(apps)
+    
+    # record_action will handle quota deduction
+    record_action(user_id, "apply_famous", node_id, node["name"], nickname)
+    return new_app
+
+@app.post("/api/applications/{app_id}/process")
+def process_application(
+    app_id: str,
+    action: str = Form(...),
+    user_id: str = Form("guest"),
+    nickname: str = Form("未知用户")
+):
+    admins = load_admins()
+    if user_id not in admins:
+        raise HTTPException(403, "Unauthorized")
+        
+    apps = load_applications()
+    app_idx = next((i for i, a in enumerate(apps) if a["id"] == app_id), None)
+    if app_idx is None:
+        raise HTTPException(404, "Application not found")
+        
+    application = apps[app_idx]
+    node_id = application["node_id"]
+    node_name = application["node_name"]
+    
+    if action == "approve":
+        data = load_data()
+        nodes = data.get("nodes", [])
+        node = next((n for n in nodes if n["id"] == node_id), None)
+        if node:
+            node["is_famous"] = True
+            save_data(data)
+        record_action(user_id, "approve_famous", node_id, node_name, nickname)
+    else:
+        record_action(user_id, "reject_famous", node_id, node_name, nickname)
+        
+    apps.pop(app_idx)
+    save_applications(apps)
+    return {"message": "Processed"}
+
+@app.patch("/api/nodes/{node_id}/famous")
+def toggle_famous(
+    node_id: int,
+    is_famous: bool = Form(...),
+    user_id: str = Form("guest"),
+    nickname: str = Form("未知用户")
+):
+    admins = load_admins()
+    if user_id not in admins:
+        raise HTTPException(403, "Unauthorized")
+        
+    data = load_data()
+    nodes = data.get("nodes", [])
+    node = next((n for n in nodes if n["id"] == node_id), None)
+    if not node:
+        raise HTTPException(404, "Node not found")
+        
+    node["is_famous"] = is_famous
+    save_data(data)
+    record_action(user_id, "edit", node_id, node["name"], nickname)
+    return node
 
 if __name__ == "__main__":
     import uvicorn

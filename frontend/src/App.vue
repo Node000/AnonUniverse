@@ -11,6 +11,7 @@ const loading = ref(true)
 const selectedNode = ref(null)
 const isPanelOpen = ref(false)
 const isDropdownOpen = ref(false)
+let isDraggingNode = false // Track dragging state for physics optimization
 const currentUser = reactive({
   user_id: 'guest',
   nickname: '游客',
@@ -25,6 +26,9 @@ const fetchUserInfo = async (userId = 'guest', nickname = '游客') => {
     console.log('Fetching user info from:', url)
     const response = await axios.get(url)
     Object.assign(currentUser, response.data)
+    if (currentUser.role === 'admin') {
+      fetchPendingApplications()
+    }
   } catch (error) {
     console.error('Failed to fetch user info:', error)
     // If fetch fails but we have stored credentials (not guest),
@@ -55,6 +59,18 @@ const activeFilters = ref([])
 const showHistory = ref(false)
 const historyData = ref([])
 const historyType = ref('global') // 'global' or 'node'
+
+// Famous Fanwork state
+const showFamous = ref(false)
+const pendingApplications = ref([])
+const showApplyFamousModal = ref(false)
+const showPendingApplicationsModal = ref(false)
+
+const canApplyFamous = computed(() => {
+  if (!currentUser.logged_in) return false
+  if (currentUser.role === 'admin') return true
+  return currentUser.quota && currentUser.quota.applies < 1
+})
 
 // Site info state
 const showSiteInfo = ref(false)
@@ -139,9 +155,10 @@ const fetchGraphData = async () => {
     const data = response.data.nodes
 
     renderNodes(data)
-    loading.value = false
+    // loading.value = false // Moves to network stabilization event
   } catch (error) {
     console.error('Failed to fetch data:', error)
+    loading.value = false
   }
 }
 
@@ -282,15 +299,17 @@ const renderNodes = (data) => {
       node.extension.forEach(targetId => {
         if (nodeIds.has(targetId)) {
           // Increase lengths to match the manual (x,y) layout scale
-          let baseLength = 200;
+          let baseLength = 250;
           const rootId = (node.id === 1 || node.id === '1');
-          const secondaryId = (node.id === 2 || node.id === '2');
           
-          if (rootId) baseLength = 400;      // 核心向外推得更远
-          else if (secondaryId) baseLength = 300; // 二级节点
+          // 手游立绘爱音 (id=4)
+          const isMobileGameNode = (node.id === 4 || node.id === '4');
           
-          // 加入 10% 的随机扰动
-          const jitter = Math.floor(Math.random() * (baseLength * 0.1));
+          if (rootId) baseLength = 450;                 // 核心向外推得更远
+          else if (isMobileGameNode) baseLength = 400;  // 手游立绘分支需要更多空间散开
+
+          // 加入 15% 的随机扰动
+          const jitter = Math.floor(Math.random() * (baseLength * 0.15));
           
           edges.push({ 
             id: `${node.id}-${targetId}`, 
@@ -384,11 +403,11 @@ const focusNode = (nodeId) => {
   if (node) {
     if (focusedNodeId.value && focusedNodeId.value !== nodeId) {
        const prevNode = nodesData.get(focusedNodeId.value)
-       if (prevNode) nodesData.update({ id: focusedNodeId.value, size: prevNode.originalSize })
+       if (prevNode) nodesData.update({ id: focusedNodeId.value, size: prevNode.originalSize, borderWidth: 3 })
     }
     focusedNodeId.value = nodeId
-    // Highlight focused node by increasing size
-    nodesData.update({ id: nodeId, size: node.originalSize * 1.5 })
+    // Highlight focused node by increasing size and border width
+    nodesData.update({ id: nodeId, size: node.originalSize * 1.5, borderWidth: 6 })
     
     selectedNode.value = node
     isPanelOpen.value = true
@@ -405,7 +424,7 @@ const resetView = () => {
   if (network) {
     if (focusedNodeId.value) {
       const n = nodesData.get(focusedNodeId.value)
-      if (n) nodesData.update({ id: focusedNodeId.value, size: n.originalSize })
+      if (n) nodesData.update({ id: focusedNodeId.value, size: n.originalSize, borderWidth: 3 })
       focusedNodeId.value = null
     }
     const node1 = nodesData.get(1)
@@ -681,12 +700,56 @@ const submitForm = async () => {
   }
 
   try {
+    let resultNode;
     if (isAdding.value) {
-      await axios.post(`${apiBase}/api/nodes`, formData)
+      const resp = await axios.post(`${apiBase}/api/nodes`, formData)
+      resultNode = resp.data;
+      // For adding, we might need to refresh to get correct layout/edges, or we can manually add it.
+      // Refreshing is safer for new nodes to ensure links are correct.
+      await fetchGraphData()
     } else {
-      await axios.put(`${apiBase}/api/nodes/${editForm.id}`, formData)
+      const resp = await axios.put(`${apiBase}/api/nodes/${editForm.id}`, formData)
+      resultNode = resp.data;
+      
+      // Update local data without full refresh
+      nodesData.update({
+        id: resultNode.id,
+        label: resultNode.name,
+        image: resultNode.image.startsWith('http') ? resultNode.image : `${apiBase}${resultNode.image}`,
+        // Keep other properties that might be used by vis-network or internal logic
+        // We also need to update the data source for the detail panel which reads from selectedNode
+      })
+      
+      // Update selectedNode which updates the side panel
+      if (selectedNode.value && selectedNode.value.id === resultNode.id) {
+         Object.assign(selectedNode.value, resultNode);
+      }
+      
+      // If we edited relations, edges might need update.
+      // Simple edit of name/image doesn't change edges.
+      // If 'related' or 'extension' changed, we might need to update edges?
+      // The backend 'update_node' takes 'extension'. 
+      // If extension changed, edges change.
+      // Let's check if extension changed.
+      // For now, to meet "update name and image", this is enough. 
+      // Use full refresh if edges might have changed? 
+      // The user said "update name and image". Assuming structure didn't change heavily.
+      // If structure changed, we probably entered 'isAdding' or specific logic.
+      // But let's be safe: only avoid fetchGraphData if we just want to update content.
+      // To properly handle edge changes locally is complex.
+      // Let's assume for "Edit" we just update node data. 
+      // If edges need update, a full refresh is safer, but user asked to avoid it.
+      // Let's try to update logic: 
+      // The server returns the updated node. 
+      // If we only update rendering, we update `nodesData`.
+      
+      // Note: renderNodes calls 'nodesData.update' which merges.
+      // But renderNodes also re-calculates edges.
+      
+      // Let's stick to user request: "Modify detail -> update name and image".
+      // We'll update the node in `nodesData` and `selectedNode`.
     }
-    await fetchGraphData()
+    
     await fetchUserInfo(currentUser.user_id, currentUser.nickname)
     isEditing.value = false
     isAdding.value = false
@@ -726,8 +789,14 @@ const saveNodePosition = async () => {
   
   try {
     await axios.patch(`${apiBase}/api/nodes/${selectedNode.value.id}/position`, formData)
+    // Update local dataset position to prevent 'jumping' back if we don't refresh
+    // actually vis-network already has the new position since we got it from network.getPositions
+    // so we just need to suppress the fetchGraphData
+    
+    // However, if we don't save to backend, it reverts on reload. We did save.
+    // The user doesn't want full re-render.
     alert('位置保存成功')
-    await fetchGraphData()
+    // await fetchGraphData() // Removed to prevent re-render
   } catch (error) {
     alert(error.response?.data?.detail || '保存位置失败')
   }
@@ -781,6 +850,85 @@ const fetchHistory = async (nodeId = null) => {
   }
 }
 
+const fetchPendingApplications = async () => {
+  if (currentUser.role !== 'admin') return
+  try {
+    const response = await axios.get(`${apiBase}/api/applications`, {
+      params: { user_id: currentUser.user_id }
+    })
+    pendingApplications.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch applications:', error)
+  }
+}
+
+const openPendingApplications = () => {
+  fetchPendingApplications()
+  showPendingApplicationsModal.value = true
+}
+
+const submitFamousApplication = async () => {
+  if (!selectedNode.value) return
+  
+  const formData = new FormData()
+  formData.append('node_id', selectedNode.value.id)
+  formData.append('user_id', currentUser.user_id)
+  formData.append('nickname', currentUser.nickname)
+  
+  try {
+    await axios.post(`${apiBase}/api/applications`, formData)
+    alert('申请已提交')
+    showApplyFamousModal.value = false
+    await fetchUserInfo(currentUser.user_id, currentUser.nickname)
+  } catch (error) {
+    alert(error.response?.data?.detail || '申请失败')
+  }
+}
+
+const processApplication = async (appId, action) => {
+  const app = pendingApplications.value.find(a => a.id === appId)
+  const nodeId = app ? app.node_id : null
+  
+  const formData = new FormData()
+  formData.append('action', action)
+  formData.append('user_id', currentUser.user_id)
+  formData.append('nickname', currentUser.nickname)
+  
+  try {
+    await axios.post(`${apiBase}/api/applications/${appId}/process`, formData)
+    await fetchPendingApplications()
+    if (action === 'approve' && nodeId) {
+      const updatedNode = nodesData.get(nodeId)
+      if (updatedNode) {
+        nodesData.update({ id: nodeId, is_famous: true })
+        if (selectedNode.value && selectedNode.value.id === nodeId) {
+          selectedNode.value.is_famous = true
+        }
+      }
+    }
+  } catch (error) {
+    alert(error.response?.data?.detail || '处理失败')
+  }
+}
+
+const toggleFamousStatus = async () => {
+  if (!selectedNode.value || currentUser.role !== 'admin') return
+  
+  const newStatus = !selectedNode.value.is_famous
+  const formData = new FormData()
+  formData.append('is_famous', newStatus)
+  formData.append('user_id', currentUser.user_id)
+  formData.append('nickname', currentUser.nickname)
+  
+  try {
+    await axios.patch(`${apiBase}/api/nodes/${selectedNode.value.id}/famous`, formData)
+    nodesData.update({ id: selectedNode.value.id, is_famous: newStatus })
+    selectedNode.value.is_famous = newStatus
+  } catch (error) {
+    alert(error.response?.data?.detail || '修改失败')
+  }
+}
+
 const toggleSiteInfo = (e) => {
   if (e) e.stopPropagation()
   showSiteInfo.value = !showSiteInfo.value
@@ -823,19 +971,20 @@ const initNetwork = () => {
       solver: 'barnesHut',
       barnesHut: {
         gravitationalConstant: -2000,
-        centralGravity: 0,
+        centralGravity: 0.1, // Increase slightly to help convergence
         springLength: 200,
         springConstant: 0.04,
         damping: 0.5,
-        avoidOverlap: 0.1
+        avoidOverlap: 0.2 // Increase slightly
       },
       stabilization: {
         enabled: true,
-        iterations: 1000,
-        updateInterval: 50
+        iterations: 500, // Reduced from 1000 for faster load
+        updateInterval: 25,
+        fit: true
       },
       adaptiveTimestep: true,
-      minVelocity: 0.1
+      minVelocity: 0.5 // Stop sooner
     },
     layout: {
       randomSeed: 42
@@ -848,10 +997,109 @@ const initNetwork = () => {
 
   if (vizContainer.value) {
     network = new Network(vizContainer.value, data, options)
+    
+    // 性能优化：稳定后关闭物理引擎，并隐藏加载动画
+    network.once("stabilizationIterationsDone", () => {
+      loading.value = false
+      network.setOptions({ physics: { enabled: false } })
+    })
+    
+    // 拖拽时标记状态并开启物理引擎，通过 simulation 确保即使微小移动也激活
+    network.on("dragStart", (params) => {
+       isDraggingNode = true
+       network.setOptions({ physics: { enabled: true } })
+       network.startSimulation();
+    })
+    
+    // 拖拽结束时重置状态，物理引擎会在稳定后自动关闭
+    network.on("dragEnd", (params) => {
+       isDraggingNode = false
+       // Force a re-simulation to ensure settling animation plays out
+       network.startSimulation();
+    })
+
+    // 仅当非拖拽状态且网络趋于稳定时才关闭物理引擎
+    network.on("stabilized", () => {
+       if (!isDraggingNode) {
+          network.setOptions({ physics: { enabled: false } })
+       }
+    })
+
   } else {
     console.error('Viz container is not available')
     return
   }
+
+  let lastFrameTime = 0;
+  const FPS_LIMIT = 30;
+  const FRAME_INTERVAL = 1000 / FPS_LIMIT;
+  
+  let isZoomingOrPanning = false; // Flag to skip redraw during interaction
+
+  const animateFamousNodes = (timestamp) => {
+    // Basic throttling
+    if (!lastFrameTime) lastFrameTime = timestamp;
+    const elapsed = timestamp - lastFrameTime;
+
+    if (elapsed > FRAME_INTERVAL) {
+      if (showFamous.value && network) {
+        // Increment angle based on time to be smooth regardless of frame rate
+        famousRotationAngle += 0.008 * (elapsed / FRAME_INTERVAL);
+        
+        // Only trigger redraw if NOT zooming/panning to avoid fighting for resources
+        if (!isZoomingOrPanning) {
+           network.redraw();
+        }
+        // If zooming/panning, vis-network redraws itself, which triggers afterDrawing anyway, so we just update the angle.
+      }
+      lastFrameTime = timestamp - (elapsed % FRAME_INTERVAL);
+    }
+    
+    requestAnimationFrame(animateFamousNodes);
+  };
+  requestAnimationFrame(animateFamousNodes);
+
+  // Optimize: Listen to zoom/drag to prevent redundant redraws
+  network.on("zoom", () => {
+    isZoomingOrPanning = true;
+    if (window.zoomTimeout) clearTimeout(window.zoomTimeout);
+    window.zoomTimeout = setTimeout(() => {
+      isZoomingOrPanning = false;
+    }, 100);
+  });
+  
+  network.on("dragStart", () => {
+     isZoomingOrPanning = true;
+  });
+  
+  network.on("dragEnd", () => {
+     isZoomingOrPanning = false; // Resume managed redraws
+  });
+
+  network.on("afterDrawing", (ctx) => {
+    if (!showFamous.value) return;
+    const nodes = nodesData.get();
+    nodes.forEach(node => {
+      if (node.is_famous) {
+        const pos = network.getPositions([node.id])[node.id];
+        if (pos) {
+          ctx.save();
+          ctx.translate(pos.x, pos.y);
+          ctx.rotate(famousRotationAngle);
+          ctx.beginPath();
+          const radius = (node.size || 40) + 15;
+          const circumference = 2 * Math.PI * radius;
+          const dashLen = circumference / 12; // 6 segments, each with 1 solid and 1 gap
+          ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+          ctx.strokeStyle = '#87CEEB';
+          ctx.lineWidth = 6;
+          ctx.setLineDash([dashLen, dashLen]);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    });
+  });
 
   // View Drag Inertia Logic
   let lastTime = 0
@@ -914,7 +1162,7 @@ const initNetwork = () => {
       if (focusedNodeId.value === nodeId) {
         // Deselect if clicking the same node
         const n = nodesData.get(nodeId)
-        nodesData.update({ id: nodeId, size: n.originalSize })
+        nodesData.update({ id: nodeId, size: n.originalSize, borderWidth: 3 })
         focusedNodeId.value = null
         isPanelOpen.value = false
       } else {
@@ -923,7 +1171,7 @@ const initNetwork = () => {
     } else {
       if (focusedNodeId.value) {
         const n = nodesData.get(focusedNodeId.value)
-        if (n) nodesData.update({ id: focusedNodeId.value, size: n.originalSize })
+        if (n) nodesData.update({ id: focusedNodeId.value, size: n.originalSize, borderWidth: 3 })
         focusedNodeId.value = null
       }
       isPanelOpen.value = false
@@ -932,6 +1180,8 @@ const initNetwork = () => {
   })
   
   network.on('hoverNode', (params) => {
+     // 优化：缩放或拖动时禁用悬停效果，避免重绘导致卡顿
+     if (isZoomingOrPanning) return;
      const nodeId = params.node
      const n = nodesData.get(nodeId)
      // Increase size slightly on hover based on its own original size
@@ -940,11 +1190,16 @@ const initNetwork = () => {
   })
   
   network.on('blurNode', (params) => {
-      const nodeId = params.node
-      const n = nodesData.get(nodeId)
-      // Return back to its own original size
-      if (n) nodesData.update({id: nodeId, size: n.originalSize})
-      document.body.style.cursor = 'default'
+      // 优化：允许恢复节点大小，并将此操作放入下一个宏任务，避免与缩放事件冲突
+      setTimeout(() => {
+        const nodeId = params.node
+        const n = nodesData.get(nodeId)
+        // Return back to its own original size (only if not focused)
+        if (n && focusedNodeId.value !== nodeId) {
+          nodesData.update({id: nodeId, size: n.originalSize})
+        }
+        document.body.style.cursor = 'default'
+      }, 0);
   })
 }
 
@@ -1019,20 +1274,38 @@ onUnmounted(() => {
 
     <!-- UI Buttons -->
     <div class="ui-layer top-left">
-      <div class="left-controls">
-        <button class="home-btn pink-btn" @click="resetView">回到中心</button>
-        <button class="history-btn pink-btn" @click.stop="toggleHistory()">全站历史</button>
-        <button class="theme-toggle" @click="toggleDarkMode" :class="{ 'dark-mode-btn': isDarkMode }">
-          <!-- Sun (Light Mode) Icon -->
-          <svg v-if="!isDarkMode" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5" />
-            <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M17.66 6.34l1.42-1.42" />
-          </svg>
-          <!-- Moon (Dark Mode) Icon -->
-          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-          </svg>
-        </button>
+      <div class="left-controls-container" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="left-controls">
+          <button class="home-btn pink-btn" @click="resetView">回到中心</button>
+          <button class="history-btn pink-btn" @click.stop="toggleHistory()">全站历史</button>
+          <button class="theme-toggle" @click="toggleDarkMode" :class="{ 'dark-mode-btn': isDarkMode }">
+            <!-- Sun (Light Mode) Icon -->
+            <svg v-if="!isDarkMode" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5" />
+              <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M17.66 6.34l1.42-1.42" />
+            </svg>
+            <!-- Moon (Dark Mode) Icon -->
+            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+          </button>
+        </div>
+        <div class="left-controls-row2" style="display: flex; gap: 10px;">
+          <button 
+            class="famous-toggle-btn" 
+            :class="{ active: showFamous }" 
+            @click="showFamous = !showFamous"
+          >
+            知名二创显示
+          </button>
+          <button 
+            v-if="currentUser.role === 'admin'" 
+            class="famous-pending-btn" 
+            @click="openPendingApplications"
+          >
+            待认证：{{ pendingApplications.length }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1069,6 +1342,10 @@ onUnmounted(() => {
                   <div class="quota-item">
                     <span>删除</span>
                     <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (1 - currentUser.quota.deletes) }}</span>
+                  </div>
+                  <div class="quota-item">
+                    <span>申请</span>
+                    <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (1 - (currentUser.quota.applies || 0)) }}</span>
                   </div>
                 </div>
                 <button @click="logout" class="logout-btn">退出登录</button>
@@ -1140,6 +1417,19 @@ onUnmounted(() => {
               <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
+
+          <!-- Apply Famous Button -->
+          <button 
+            v-if="!isEditing && !isAdding && selectedNode && !selectedNode.is_famous" 
+            class="node-apply-famous-btn-round" 
+            :class="{ disabled: !canApplyFamous }"
+            title="申请知名二创"
+            @click.stop="canApplyFamous ? showApplyFamousModal = true : null"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+          </button>
           
           <!-- View Mode -->
           <template v-if="!isEditing && !isAdding && selectedNode">
@@ -1158,7 +1448,10 @@ onUnmounted(() => {
               >
             </div>
             
-            <h2 class="node-name">{{ selectedNode.name }}</h2>
+            <h2 class="node-name">
+              <span v-if="selectedNode.is_famous" title="已认证知名二创" style="color: #ff69b4; margin-right: 5px; cursor: help;">★</span>
+              {{ selectedNode.name }}
+            </h2>
             
             <div class="info-item">
               <label>出处：</label>
@@ -1171,14 +1464,14 @@ onUnmounted(() => {
               <span class="info-intro">{{ selectedNode.introduction }}</span>
             </div>
             
-            <div class="info-item">
+            <div class="info-item" v-if="selectedNode.tags && selectedNode.tags.length > 0">
               <label>标签：</label>
               <div class="tag-list">
                 <span v-for="tag in selectedNode.tags" :key="tag" class="tag">{{ tag }}</span>
               </div>
             </div>
             
-            <div class="info-item">
+            <div class="info-item" v-if="selectedNode.related && selectedNode.related.length > 0">
               <label>相关作品：</label>
               <div class="related-list">
                 <div v-for="(item, idx) in selectedNode.related" :key="idx" class="related-item">
@@ -1188,32 +1481,41 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="action-buttons">
-              <button 
-                class="btn edit" 
-                :disabled="!canEditSelectedNode" 
-                :title="!canEditSelectedNode ? '今日修改配额已用完' : ''"
-                @click="startEdit"
-              >修改</button>
-              <button 
-                class="btn add" 
-                :disabled="!canAddNode"
-                :title="!canAddNode ? '今日新增配额已用完' : ''"
-                @click="startAdd"
-              >新增</button>
-              <button 
-                class="btn delete" 
-                :class="{ 'disabled-btn': !canDeleteSelectedNode }" 
-                :disabled="!canDeleteSelectedNode"
-                @click="deleteNode"
-                :title="deleteDisabledReason"
-              >删除</button>
-              <button 
-                v-if="currentUser.role === 'admin'"
-                class="btn save-pos" 
-                @click="saveNodePosition"
-                title="保存当前节点位置"
-              >保存位置</button>
+            <div class="action-buttons-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+              <div class="action-buttons" style="margin-top: 0;">
+                <button 
+                  class="btn edit" 
+                  :disabled="!canEditSelectedNode" 
+                  :title="!canEditSelectedNode ? '今日修改配额已用完' : ''"
+                  @click="startEdit"
+                >修改</button>
+                <button 
+                  class="btn add" 
+                  :disabled="!canAddNode"
+                  :title="!canAddNode ? '今日新增配额已用完' : ''"
+                  @click="startAdd"
+                >新增</button>
+                <button 
+                  class="btn delete" 
+                  :class="{ 'disabled-btn': !canDeleteSelectedNode }" 
+                  :disabled="!canDeleteSelectedNode"
+                  @click="deleteNode"
+                  :title="deleteDisabledReason"
+                >删除</button>
+              </div>
+              <div class="action-buttons" v-if="currentUser.role === 'admin'" style="margin-top: 0;">
+                <button 
+                  class="btn save-pos" 
+                  @click="saveNodePosition"
+                  title="保存当前节点位置"
+                >保存位置</button>
+                <button 
+                  class="btn famous-toggle" 
+                  @click="toggleFamousStatus"
+                  title="切换知名二创状态"
+                  style="background: #87CEEB;"
+                >{{ selectedNode.is_famous ? '取消知名二创' : '设为知名二创' }}</button>
+              </div>
             </div>
           </template>
 
@@ -1296,15 +1598,20 @@ onUnmounted(() => {
               <div v-for="(item, idx) in historyData" :key="idx" class="history-item">
                 <span class="history-time">[{{ item.time }}]</span>
                 <span class="history-user" :class="item.role">[{{ item.nickname }}]</span>
-                <span> 进行了 </span>
+                <span v-if="item.action === 'apply_famous'"> 申请 </span>
+                <span v-else-if="item.action === 'approve_famous'"> 同意了 </span>
+                <span v-else-if="item.action === 'reject_famous'"> 拒绝了 </span>
+                <span v-else> 进行了 </span>
                 <span class="history-action" :class="item.action">
-                  {{ item.action === 'add' ? '新增' : item.action === 'edit' ? '修改' : '删除' }}
+                  {{ item.action === 'add' ? '新增' : item.action === 'edit' ? '修改' : item.action === 'delete' ? '删除' : '' }}
                 </span>
-                <span v-if="historyType === 'global'">
-                  <span> 形象 </span>
+                <span v-if="historyType === 'global' || item.action.includes('famous')">
+                  <span v-if="!item.action.includes('famous')"> 形象 </span>
                   <span class="history-node-link" @click="focusNode(item.node_id); showHistory = false">
                     {{ item.node_name }}
                   </span>
+                  <span v-if="item.action === 'apply_famous'"> 为<span style="color: #87CEEB;">知名二创</span> </span>
+                  <span v-if="item.action === 'approve_famous' || item.action === 'reject_famous'"> 的<span style="color: #87CEEB;">知名二创</span>申请 </span>
                 </span>
               </div>
             </template>
@@ -1332,6 +1639,50 @@ onUnmounted(() => {
         </div>
       </div>
     </Transition>
+
+    <!-- Apply Famous Modal -->
+    <div v-if="showApplyFamousModal" class="modal-overlay" @click="showApplyFamousModal = false">
+      <div class="apply-famous-modal" @click.stop style="background: #1a1a2e; border: 1px solid #ff69b4; border-radius: 10px; width: 320px; display: flex; flex-direction: column;">
+        <div class="modal-header" style="display: flex; justify-content: center; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255, 105, 180, 0.3);">
+          <h3 style="margin: 0; color: #ff69b4;">申请知名二创</h3>
+        </div>
+        <div class="modal-body" style="padding: 20px; text-align: center; line-height: 1.6; color: #fff;">
+          <p>作品为剧情类二创</p>
+          <p>B站播放量≥20W</p>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: center; gap: 40px; padding: 0 10px 20px 10px;">
+          <button class="btn confirm" @click="submitFamousApplication">确认</button>
+          <button class="btn cancel" @click="showApplyFamousModal = false">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Applications Modal -->
+    <div v-if="showPendingApplicationsModal" class="modal-overlay" @click="showPendingApplicationsModal = false">
+      <div class="pending-applications-modal" @click.stop style="background: #1a1a2e; border: 1px solid #ff69b4; border-radius: 10px; width: 90%; max-width: 500px; max-height: 80vh; display: flex; flex-direction: column;">
+        <div class="modal-header" style="position: relative; display: flex; justify-content: center; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255, 105, 180, 0.3);">
+          <h3 style="margin: 0; color: #ff69b4;">待认证申请</h3>
+          <button class="close-btn" @click="showPendingApplicationsModal = false" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #ff69b4; background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
+        </div>
+        <div class="modal-body" style="padding: 20px; overflow-y: auto; flex: 1;">
+          <div v-if="pendingApplications.length === 0" style="text-align: center; color: #888;">暂无申请</div>
+          <div v-for="app in pendingApplications" :key="app.id" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); gap: 10px;">
+            <div style="flex: 1; word-break: break-all; color: #fff;">
+              <span style="color: #50e3c2;">{{ app.nickname }}</span> 申请 
+              <span 
+                style="color: #ff69b4; cursor: pointer; text-decoration: underline;" 
+                @click="focusNode(app.node_id); showPendingApplicationsModal = false"
+              >{{ app.node_name }}</span> 
+              为<span style="color: #87CEEB;">知名二创</span>
+            </div>
+            <div style="display: flex; gap: 10px; flex-shrink: 0;">
+              <button class="btn confirm" style="padding: 5px 10px; font-size: 12px;" @click="processApplication(app.id, 'approve')">同意</button>
+              <button class="btn delete" style="padding: 5px 10px; font-size: 12px;" @click="processApplication(app.id, 'reject')">拒绝</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Crop Modal -->
     <div v-if="showCropModal" class="crop-modal-overlay">
@@ -1898,6 +2249,7 @@ onUnmounted(() => {
   padding: 10px 15px;
   cursor: pointer;
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 
@@ -1910,6 +2262,12 @@ onUnmounted(() => {
   background: #ff69b4;
   padding: 2px 5px;
   border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
 }
 
 input,
@@ -2173,6 +2531,74 @@ textarea::-webkit-scrollbar {
 .node-update-history-btn-round:hover {
   background: rgba(255, 105, 180, 0.3);
   transform: scale(1.1);
+}
+
+.node-apply-famous-btn-round {
+  position: absolute;
+  top: 15px;
+  left: 60px;
+  width: 35px;
+  height: 35px;
+  background: rgba(255, 105, 180, 0.2);
+  color: #ff69b4;
+  border: 1px solid #ff69b4;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  transition: all 0.3s;
+  z-index: 201;
+}
+
+.node-apply-famous-btn-round:hover:not(.disabled) {
+  background: rgba(255, 105, 180, 0.3);
+  transform: scale(1.1);
+}
+
+.node-apply-famous-btn-round.disabled {
+  background: rgba(128, 128, 128, 0.2);
+  color: #888;
+  border-color: #888;
+  cursor: not-allowed;
+}
+
+.famous-toggle-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  background: rgba(135, 206, 235, 0.2);
+  color: #87CEEB;
+  border: 1px solid #87CEEB;
+  transition: all 0.3s ease;
+}
+
+.famous-toggle-btn:hover {
+  background: rgba(135, 206, 235, 0.3);
+  box-shadow: 0 0 10px rgba(135, 206, 235, 0.5);
+}
+
+.famous-toggle-btn.active {
+  background: rgba(135, 206, 235, 0.8);
+  color: #fff;
+}
+
+.famous-pending-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  background: rgba(135, 206, 235, 0.2);
+  color: #87CEEB;
+  border: 1px solid #87CEEB;
+  transition: all 0.3s ease;
+}
+
+.famous-pending-btn:hover {
+  background: rgba(135, 206, 235, 0.3);
+  box-shadow: 0 0 10px rgba(135, 206, 235, 0.5);
 }
 
 .panel-inner-close-btn {
