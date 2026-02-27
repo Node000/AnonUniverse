@@ -218,6 +218,18 @@ const toggleDarkMode = () => {
 
 const renderNodes = (data) => {
   if (!data) return; // Guard against empty data
+
+  // Pre-calculate connection counts to determine node size
+  const connectionCounts = {}
+  data.forEach(node => {
+     if (!connectionCounts[node.id]) connectionCounts[node.id] = 0;
+     if (node.extension && Array.isArray(node.extension)) {
+        node.extension.forEach(targetId => {
+           connectionCounts[node.id]++;
+           connectionCounts[targetId] = (connectionCounts[targetId] || 0) + 1;
+        });
+     }
+  });
   
   const nodes = data.map(node => {
     // Process potentially stringified JSON data from server
@@ -232,6 +244,10 @@ const renderNodes = (data) => {
     }
 
     const imageUrl = node.image ? (node.image.startsWith('http') ? node.image : `${apiBase}${node.image}`) : `${apiBase}/images/default.png`;
+    
+    // Calculate size based on connections
+    const nodeSize = 35 + Math.min(25, (connectionCounts[node.id] || 0) * 2.5);
+
     return {
       ...node,
       source,
@@ -241,6 +257,8 @@ const renderNodes = (data) => {
       label: node.name,
       shape: 'circularImage',
       image: imageUrl,
+      size: nodeSize,
+      originalSize: nodeSize, // Store for hover/blur and other effects
       brokenImage: `${apiBase}/images/default.png`,
       color: {
         border: '#ff69b4',
@@ -248,7 +266,11 @@ const renderNodes = (data) => {
       },
       shapeProperties: {
          useBorderWithImage: true
-      }
+      },
+      // Give nodes more mass based on their connections to stabilize them
+      mass: (connectionCounts[node.id] || 0) + 1,
+      // Fix root node at 0,0 to anchor the galaxy
+      fixed: node.id === 1 || node.id === '1'
     };
   })
 
@@ -259,16 +281,16 @@ const renderNodes = (data) => {
     if (node.extension) {
       node.extension.forEach(targetId => {
         if (nodeIds.has(targetId)) {
-          // 根据父节点的重要程度设置不同的连线长度
-          let baseLength = 150;
+          // Increase lengths to match the manual (x,y) layout scale
+          let baseLength = 200;
           const rootId = (node.id === 1 || node.id === '1');
           const secondaryId = (node.id === 2 || node.id === '2');
           
           if (rootId) baseLength = 400;      // 核心向外推得更远
-          else if (secondaryId) baseLength = 250; // 二级节点
+          else if (secondaryId) baseLength = 300; // 二级节点
           
-          // 加入 20% 的随机扰动，打破同心圆的刻板感
-          const jitter = Math.floor(Math.random() * (baseLength * 0.2));
+          // 加入 10% 的随机扰动
+          const jitter = Math.floor(Math.random() * (baseLength * 0.1));
           
           edges.push({ 
             id: `${node.id}-${targetId}`, 
@@ -361,10 +383,12 @@ const focusNode = (nodeId) => {
   const node = nodesData.get(nodeId)
   if (node) {
     if (focusedNodeId.value && focusedNodeId.value !== nodeId) {
-       nodesData.update({ id: focusedNodeId.value, size: 40 })
+       const prevNode = nodesData.get(focusedNodeId.value)
+       if (prevNode) nodesData.update({ id: focusedNodeId.value, size: prevNode.originalSize })
     }
     focusedNodeId.value = nodeId
-    nodesData.update({ id: nodeId, size: 55 })
+    // Highlight focused node by increasing size
+    nodesData.update({ id: nodeId, size: node.originalSize * 1.5 })
     
     selectedNode.value = node
     isPanelOpen.value = true
@@ -380,7 +404,8 @@ const focusNode = (nodeId) => {
 const resetView = () => {
   if (network) {
     if (focusedNodeId.value) {
-      nodesData.update({ id: focusedNodeId.value, size: 40 })
+      const n = nodesData.get(focusedNodeId.value)
+      if (n) nodesData.update({ id: focusedNodeId.value, size: n.originalSize })
       focusedNodeId.value = null
     }
     const node1 = nodesData.get(1)
@@ -641,6 +666,15 @@ const submitForm = async () => {
   formData.append('nickname', currentUser.nickname)
   if (parentIdForNewNode.value) {
     formData.append('parent_id', parentIdForNewNode.value)
+    if (isAdding.value && network) {
+      const parentPos = network.getPositions([parentIdForNewNode.value])[parentIdForNewNode.value]
+      if (parentPos) {
+        const angle = Math.random() * 2 * Math.PI
+        const distance = 150
+        formData.append('x', parentPos.x + Math.cos(angle) * distance)
+        formData.append('y', parentPos.y + Math.sin(angle) * distance)
+      }
+    }
   }
   if (editForm.imageFile) {
     formData.append('image', editForm.imageFile)
@@ -675,6 +709,27 @@ const deleteNode = async () => {
     }
   } else if (confirmName !== null) {
     alert('名字不一致，取消删除')
+  }
+}
+
+const saveNodePosition = async () => {
+  if (!selectedNode.value || !network) return
+  
+  const pos = network.getPositions([selectedNode.value.id])[selectedNode.value.id]
+  if (!pos) return
+  
+  const formData = new FormData()
+  formData.append('x', pos.x)
+  formData.append('y', pos.y)
+  formData.append('user_id', currentUser.user_id)
+  formData.append('nickname', currentUser.nickname)
+  
+  try {
+    await axios.patch(`${apiBase}/api/nodes/${selectedNode.value.id}/position`, formData)
+    alert('位置保存成功')
+    await fetchGraphData()
+  } catch (error) {
+    alert(error.response?.data?.detail || '保存位置失败')
   }
 }
 
@@ -765,14 +820,14 @@ const initNetwork = () => {
     },
     physics: {
       enabled: true,
-      solver: 'forceAtlas2Based',
-      forceAtlas2Based: {
-        gravitationalConstant: -200, // 增加斥力
-        centralGravity: 0.015,
-        springConstant: 0.03, // 降低弹力系数以允许更长的连线拉伸
-        springLength: 150,    // 基础长度
-        damping: 0.4,
-        avoidOverlap: 1
+      solver: 'barnesHut',
+      barnesHut: {
+        gravitationalConstant: -2000,
+        centralGravity: 0,
+        springLength: 200,
+        springConstant: 0.04,
+        damping: 0.5,
+        avoidOverlap: 0.1
       },
       stabilization: {
         enabled: true,
@@ -780,7 +835,7 @@ const initNetwork = () => {
         updateInterval: 50
       },
       adaptiveTimestep: true,
-      minVelocity: 0.05
+      minVelocity: 0.1
     },
     layout: {
       randomSeed: 42
@@ -858,7 +913,8 @@ const initNetwork = () => {
       const nodeId = params.nodes[0]
       if (focusedNodeId.value === nodeId) {
         // Deselect if clicking the same node
-        nodesData.update({ id: nodeId, size: 40 })
+        const n = nodesData.get(nodeId)
+        nodesData.update({ id: nodeId, size: n.originalSize })
         focusedNodeId.value = null
         isPanelOpen.value = false
       } else {
@@ -866,7 +922,8 @@ const initNetwork = () => {
       }
     } else {
       if (focusedNodeId.value) {
-        nodesData.update({ id: focusedNodeId.value, size: 40 })
+        const n = nodesData.get(focusedNodeId.value)
+        if (n) nodesData.update({ id: focusedNodeId.value, size: n.originalSize })
         focusedNodeId.value = null
       }
       isPanelOpen.value = false
@@ -876,13 +933,17 @@ const initNetwork = () => {
   
   network.on('hoverNode', (params) => {
      const nodeId = params.node
-     nodesData.update({id: nodeId, size: 55})
+     const n = nodesData.get(nodeId)
+     // Increase size slightly on hover based on its own original size
+     nodesData.update({id: nodeId, size: n.originalSize * 1.3})
      document.body.style.cursor = 'pointer'
   })
   
   network.on('blurNode', (params) => {
       const nodeId = params.node
-      nodesData.update({id: nodeId, size: 40})
+      const n = nodesData.get(nodeId)
+      // Return back to its own original size
+      if (n) nodesData.update({id: nodeId, size: n.originalSize})
       document.body.style.cursor = 'default'
   })
 }
@@ -1147,6 +1208,12 @@ onUnmounted(() => {
                 @click="deleteNode"
                 :title="deleteDisabledReason"
               >删除</button>
+              <button 
+                v-if="currentUser.role === 'admin'"
+                class="btn save-pos" 
+                @click="saveNodePosition"
+                title="保存当前节点位置"
+              >保存位置</button>
             </div>
           </template>
 
@@ -2249,6 +2316,7 @@ textarea::-webkit-scrollbar {
 .btn.edit { background: #4a90e2; }
 .btn.add { background: #50e3c2; }
 .btn.delete { background: #d0021b; }
+.btn.save-pos { background: #f39c12; }
 
 .btn:disabled {
   background: #555 !important;

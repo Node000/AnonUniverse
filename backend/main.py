@@ -347,6 +347,35 @@ def update_node(
     record_action(user_id, "edit", node["id"], node["name"], nickname)
     return node
 
+@app.patch("/api/nodes/{node_id}/position")
+def update_node_position(
+    node_id: int,
+    x: float = Form(...),
+    y: float = Form(...),
+    user_id: str = Form("guest"),
+    nickname: str = Form("未知用户")
+):
+    if user_id == "guest":
+        raise HTTPException(403, "游客状态-请登录后进行修改")
+    admins = load_admins()
+    if user_id not in admins:
+        raise HTTPException(403, "仅管理员可保存节点位置")
+        
+    data = load_data()
+    nodes = data.get("nodes", [])
+    
+    node_idx = next((i for i, n in enumerate(nodes) if n["id"] == node_id), None)
+    if node_idx is None:
+        raise HTTPException(status_code=404, detail="Node not found")
+        
+    node = nodes[node_idx]
+    node["x"] = x
+    node["y"] = y
+    
+    save_data(data)
+    record_action(user_id, "edit", node["id"], node["name"], nickname)
+    return node
+
 @app.delete("/api/nodes/{node_id}")
 def delete_node(node_id: int, user_id: str = "guest", nickname: str = "未知用户"):
     if user_id == "guest":
