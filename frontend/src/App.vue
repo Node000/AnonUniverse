@@ -1030,6 +1030,7 @@ const initNetwork = () => {
     return
   }
 
+  let famousRotationAngle = 0;
   let lastFrameTime = 0;
   const FPS_LIMIT = 30;
   const FRAME_INTERVAL = 1000 / FPS_LIMIT;
@@ -1044,7 +1045,7 @@ const initNetwork = () => {
     if (elapsed > FRAME_INTERVAL) {
       if (showFamous.value && network) {
         // Increment angle based on time to be smooth regardless of frame rate
-        famousRotationAngle += 0.008 * (elapsed / FRAME_INTERVAL);
+        famousRotationAngle += 0.03 * (elapsed / FRAME_INTERVAL);
         
         // Only trigger redraw if NOT zooming/panning to avoid fighting for resources
         if (!isZoomingOrPanning) {
@@ -2948,6 +2949,12 @@ textarea::-webkit-scrollbar {
   }
   
   .left-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .left-controls-row2 {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
