@@ -27,12 +27,52 @@ BGM_CLIENT_ID = os.getenv("BGM_CLIENT_ID", "default_id")
 BGM_CLIENT_SECRET = os.getenv("BGM_CLIENT_SECRET", "default_secret")
 BGM_REDIRECT_URI = os.getenv("BGM_REDIRECT_URI", "http://localhost:8000/api/auth/callback")
 
-DATA_FILE = "data.json"
+DATA_DIR = "data"
 IMAGES_DIR = "images"
 USERS_FILE = "users.json"
 ADMINS_FILE = "admins.json"
 HISTORY_FILE = "history.json"
 APPLICATIONS_FILE = "applications.json"
+
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
+
+def load_data():
+    nodes = []
+    if os.path.exists(DATA_DIR):
+        for filename in os.listdir(DATA_DIR):
+            if filename.endswith(".json"):
+                try:
+                    with open(os.path.join(DATA_DIR, filename), "r", encoding="utf-8") as f:
+                        node = json.load(f)
+                        nodes.append(node)
+                except (json.JSONDecodeError, IOError):
+                    continue
+    return {"nodes": nodes}
+
+def save_node(node):
+    node_id = node.get("id")
+    if node_id is None:
+        return
+    with open(os.path.join(DATA_DIR, f"{node_id}.json"), "w", encoding="utf-8") as f:
+        json.dump(node, f, ensure_ascii=False, indent=2)
+
+def delete_node_file(node_id: int):
+    # Load node data to find image path
+    file_path = os.path.join(DATA_DIR, f"{node_id}.json")
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                node = json.load(f)
+                image_url = node.get("image", "")
+                # Delete image if it is not default
+                if image_url and not image_url.endswith("default.png") and image_url.startswith("/images/"):
+                    image_path = image_url.lstrip("/")
+                    if os.path.exists(image_path):
+                        os.remove(image_path)
+        except:
+            pass
+        os.remove(file_path)
 
 def load_applications():
     if not os.path.exists(APPLICATIONS_FILE):
@@ -160,15 +200,7 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 # Mount images directory to serve static files
 app.mount("/images", StaticFiles(directory=IMAGES_DIR), name="images")
 
-def load_data():
-    if not os.path.exists(DATA_FILE):
-        return {"nodes": []}
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+# load_data is now at the top
 
 # --- Auth Routes ---
 
@@ -309,16 +341,16 @@ def add_node(
     
     # Automatic connection from parent to new node
     if parent_id is not None:
-        parent = next((n for n in nodes if n["id"] == parent_id), None)
-        if parent:
-            if "extension" not in parent:
-                parent["extension"] = []
-            if new_id not in parent["extension"]:
-                parent["extension"].append(new_id)
+        parent_file = os.path.join(DATA_DIR, f"{parent_id}.json")
+        if os.path.exists(parent_file):
+            with open(parent_file, "r", encoding="utf-8") as f:
+                parent = json.load(f)
+                if "extension" not in parent: parent["extension"] = []
+                if new_id not in parent["extension"]:
+                    parent["extension"].append(new_id)
+                    save_node(parent)
 
-    nodes.append(new_node)
-    data["nodes"] = nodes
-    save_data(data)
+    save_node(new_node)
     record_action(user_id, "add", new_node["id"], new_node["name"], nickname)
     return new_node
 
@@ -340,16 +372,21 @@ def update_node(
     if not check_permission(user_id, "edit"):
         raise HTTPException(403, "普通用户-你今天已经修改了10个爱音了，明天再来吧")
         
-    data = load_data()
-    nodes = data.get("nodes", [])
-    
-    node_idx = next((i for i, n in enumerate(nodes) if n["id"] == node_id), None)
-    if node_idx is None:
+    node_file = os.path.join(DATA_DIR, f"{node_id}.json")
+    if not os.path.exists(node_file):
         raise HTTPException(status_code=404, detail="Node not found")
         
-    node = nodes[node_idx]
+    with open(node_file, "r", encoding="utf-8") as f:
+        node = json.load(f)
     
     if image:
+        # Delete old image if it exists and is not default
+        old_image = node.get("image", "")
+        if old_image and not old_image.endswith("default.png") and old_image.startswith("/images/"):
+            try:
+                os.remove(old_image.lstrip("/"))
+            except: pass
+
         ext = image.filename.split(".")[-1]
         filename = f"{uuid.uuid4()}.{ext}"
         filepath = os.path.join(IMAGES_DIR, filename)
@@ -364,7 +401,7 @@ def update_node(
     node["extension"] = json.loads(extension)
     node["introduction"] = introduction
     
-    save_data(data)
+    save_node(node)
     record_action(user_id, "edit", node["id"], node["name"], nickname)
     return node
 
@@ -382,18 +419,16 @@ def update_node_position(
     if user_id not in admins:
         raise HTTPException(403, "仅管理员可保存节点位置")
         
-    data = load_data()
-    nodes = data.get("nodes", [])
-    
-    node_idx = next((i for i, n in enumerate(nodes) if n["id"] == node_id), None)
-    if node_idx is None:
+    node_file = os.path.join(DATA_DIR, f"{node_id}.json")
+    if not os.path.exists(node_file):
         raise HTTPException(status_code=404, detail="Node not found")
         
-    node = nodes[node_idx]
+    with open(node_file, "r", encoding="utf-8") as f:
+        node = json.load(f)
     node["x"] = x
     node["y"] = y
     
-    save_data(data)
+    save_node(node)
     record_action(user_id, "edit", node["id"], node["name"], nickname)
     return node
 
@@ -404,12 +439,46 @@ def delete_node(node_id: int, user_id: str = "guest", nickname: str = "未知用
     if not check_permission(user_id, "delete"):
         raise HTTPException(403, "普通用户-你今天已经删除了一个爱音了，明天再来吧")
         
-    data = load_data()
-    nodes = data.get("nodes", [])
-    
-    node_idx = next((i for i, n in enumerate(nodes) if n["id"] == node_id), None)
-    if (node_idx is None):
+    node_file = os.path.join(DATA_DIR, f"{node_id}.json")
+    if not os.path.exists(node_file):
         raise HTTPException(status_code=404, detail="Node not found")
+    
+    with open(node_file, "r", encoding="utf-8") as f:
+        node = json.load(f)
+    
+    if ("extension" in node and len(node["extension"]) > 0):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"该形象「{node['name']}」尚有后续的分支/后辈节点，无法删除（请先删除其关联的所有后辈形象）。"
+        )
+
+    other_nodes_exist = any(f.endswith(".json") and f != "1.json" for f in os.listdir(DATA_DIR))
+    if (node_id == 1 and other_nodes_exist):
+        raise HTTPException(status_code=400, detail="根节点爱音受到宇宙法则保护，在其他爱音被清理完之前不可删除。")
+        
+    deleted_name = node["name"]
+    
+    # Remove references from other nodes
+    for filename in os.listdir(DATA_DIR):
+        if filename.endswith(".json") and filename != f"{node_id}.json":
+            other_file = os.path.join(DATA_DIR, filename)
+            try:
+                with open(other_file, "r", encoding="utf-8") as f:
+                    other_node = json.load(f)
+                changed = False
+                if "extension" in other_node and node_id in other_node["extension"]:
+                    other_node["extension"].remove(node_id)
+                    changed = True
+                if "connections" in other_node and node_id in other_node["connections"]:
+                    other_node["connections"].remove(node_id)
+                    changed = True
+                if changed:
+                    save_node(other_node)
+            except: continue
+            
+    delete_node_file(node_id)
+    record_action(user_id, "delete", node_id, deleted_name, nickname)
+    return {"message": "Node deleted successfully"}
     
     node = nodes[node_idx]
     
@@ -473,11 +542,12 @@ def apply_famous(
     if not check_permission(user_id, "apply"):
         raise HTTPException(403, "今日申请次数已用完")
         
-    data = load_data()
-    nodes = data.get("nodes", [])
-    node = next((n for n in nodes if n["id"] == node_id), None)
-    if not node:
+    node_file = os.path.join(DATA_DIR, f"{node_id}.json")
+    if not os.path.exists(node_file):
         raise HTTPException(404, "Node not found")
+        
+    with open(node_file, "r", encoding="utf-8") as f:
+        node = json.load(f)
         
     apps = load_applications()
     if any(a["node_id"] == node_id for a in apps):
@@ -519,12 +589,12 @@ def process_application(
     node_name = application["node_name"]
     
     if action == "approve":
-        data = load_data()
-        nodes = data.get("nodes", [])
-        node = next((n for n in nodes if n["id"] == node_id), None)
-        if node:
+        node_file = os.path.join(DATA_DIR, f"{node_id}.json")
+        if os.path.exists(node_file):
+            with open(node_file, "r", encoding="utf-8") as f:
+                node = json.load(f)
             node["is_famous"] = True
-            save_data(data)
+            save_node(node)
         record_action(user_id, "approve_famous", node_id, node_name, nickname)
     else:
         record_action(user_id, "reject_famous", node_id, node_name, nickname)
@@ -544,14 +614,15 @@ def toggle_famous(
     if user_id not in admins:
         raise HTTPException(403, "Unauthorized")
         
-    data = load_data()
-    nodes = data.get("nodes", [])
-    node = next((n for n in nodes if n["id"] == node_id), None)
-    if not node:
+    node_file = os.path.join(DATA_DIR, f"{node_id}.json")
+    if not os.path.exists(node_file):
         raise HTTPException(404, "Node not found")
         
+    with open(node_file, "r", encoding="utf-8") as f:
+        node = json.load(f)
+        
     node["is_famous"] = is_famous
-    save_data(data)
+    save_node(node)
     record_action(user_id, "edit", node_id, node["name"], nickname)
     return node
 

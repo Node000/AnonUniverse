@@ -81,7 +81,7 @@ const isHistoryLoading = ref(false)
 const editForm = reactive({
   id: null,
   name: '',
-  source: { name: '', link: '' },
+  source: { name: '', link: '', type: '其他' },
   related: [],
   tags: '',
   extension: [],
@@ -451,8 +451,11 @@ const startEdit = () => {
   let rawSource = selectedNode.value.source
   if (typeof rawSource === 'string') {
     try { rawSource = JSON.parse(rawSource); } 
-    catch(e) { rawSource = { name: rawSource, link: '' }; }
+    catch(e) { rawSource = { name: rawSource, link: '', type: '其他' }; }
   }
+  
+  // Ensure source has type
+  if (!rawSource.type) rawSource.type = '其他';
   
   // Clean up related if it's a string or has invalid items
   let rawRelated = selectedNode.value.related || []
@@ -462,12 +465,19 @@ const startEdit = () => {
   }
   if (!Array.isArray(rawRelated)) rawRelated = [];
 
+  // Ensure all related items have type
+  rawRelated = rawRelated.map(item => ({
+    name: item.name || '',
+    link: item.link || '',
+    type: item.type || '其他'
+  }));
+
   Object.assign(editForm, {
     id: selectedNode.value.id,
     name: selectedNode.value.name,
     source: JSON.parse(JSON.stringify(rawSource)),
     related: JSON.parse(JSON.stringify(rawRelated)),
-    tags: selectedNode.value.tags.join(','),
+    tags: Array.isArray(selectedNode.value.tags) ? selectedNode.value.tags.join(',') : '',
     extension: selectedNode.value.extension || [],
     introduction: selectedNode.value.introduction || '',
     imagePreview: selectedNode.value.image
@@ -483,7 +493,7 @@ const startAdd = () => {
   Object.assign(editForm, {
     id: null,
     name: '',
-    source: { name: '', link: '' },
+    source: { name: '', link: '', type: '其他' },
     related: [],
     tags: '',
     introduction: '',
@@ -632,7 +642,7 @@ const cancelCrop = () => {
 }
 
 const addRelated = () => {
-  editForm.related.push({ name: '', link: '' })
+  editForm.related.push({ name: '', link: '', type: '其他' })
 }
 
 const removeRelated = (index) => {
@@ -1374,11 +1384,11 @@ onUnmounted(() => {
                 <div class="quota-info">
                   <div class="quota-item">
                     <span>新增</span>
-                    <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (1 - currentUser.quota.adds) }}</span>
+                    <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (10 - currentUser.quota.adds) }}</span>
                   </div>
                   <div class="quota-item">
                     <span>修改</span>
-                    <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (1 - currentUser.quota.edits) }}</span>
+                    <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (10 - currentUser.quota.edits) }}</span>
                   </div>
                   <div class="quota-item">
                     <span>删除</span>
@@ -1496,8 +1506,11 @@ onUnmounted(() => {
             
             <div class="info-item">
               <label>出处：</label>
-              <a v-if="selectedNode.source.link" :href="selectedNode.source.link" target="_blank" class="info-link">{{ selectedNode.source.name }}</a>
-              <span v-else>{{ selectedNode.source.name }}</span>
+              <div style="display: inline-flex; align-items: center; gap: 8px;">
+                <a v-if="selectedNode.source.link" :href="selectedNode.source.link" target="_blank" class="info-link">{{ selectedNode.source.name }}</a>
+                <span v-else>{{ selectedNode.source.name }}</span>
+                <span v-if="selectedNode.source.type" class="res-type" style="font-size: 10px; padding: 1px 4px; margin: 0;">{{ selectedNode.source.type }}</span>
+              </div>
             </div>
 
             <div class="info-item" v-if="selectedNode.introduction">
@@ -1515,9 +1528,10 @@ onUnmounted(() => {
             <div class="info-item" v-if="selectedNode.related && selectedNode.related.length > 0">
               <label>相关作品：</label>
               <div class="related-list">
-                <div v-for="(item, idx) in selectedNode.related" :key="idx" class="related-item">
+                <div v-for="(item, idx) in selectedNode.related" :key="idx" class="related-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                   <a v-if="item.link" :href="item.link" target="_blank" class="info-link">{{ item.name }}</a>
                   <span v-else>{{ item.name }}</span>
+                  <span v-if="item.type" class="res-type" style="font-size: 10px; padding: 1px 4px; margin: 0;">{{ item.type }}</span>
                 </div>
               </div>
             </div>
@@ -1585,9 +1599,19 @@ onUnmounted(() => {
 
             <div class="input-group">
               <label>出处</label>
-              <div class="pair-input">
-                <input v-model="editForm.source.name" placeholder="作品名字">
-                <input v-model="editForm.source.link" placeholder="链接 (可选)">
+              <div class="pair-input-row">
+                <div class="pair-input">
+                  <input v-model="editForm.source.name" placeholder="作品名字">
+                  <input v-model="editForm.source.link" placeholder="链接 (可选)">
+                  <select v-model="editForm.source.type" class="type-select">
+                    <option>小说</option>
+                    <option>视频</option>
+                    <option>插画</option>
+                    <option>漫画</option>
+                    <option>游戏</option>
+                    <option>其他</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -1605,10 +1629,18 @@ onUnmounted(() => {
               <label>相关作品</label>
               <div v-for="(item, index) in editForm.related" :key="index" class="pair-input-row">
                 <div class="pair-input">
-                  <input v-model="item.name" placeholder="名字">
-                  <input v-model="item.link" placeholder="链接 (可选)">
+                  <input v-model="item.name" placeholder="名字" style="flex: 1.5; min-width: 80px;">
+                  <input v-model="item.link" placeholder="链接 (可选)" style="flex: 2; min-width: 100px;">
+                  <select v-model="item.type" class="type-select">
+                    <option>小说</option>
+                    <option>视频</option>
+                    <option>插画</option>
+                    <option>漫画</option>
+                    <option>游戏</option>
+                    <option>其他</option>
+                  </select>
                 </div>
-                <button class="remove-btn" @click="removeRelated(index)">×</button>
+                <button class="remove-btn" @click="removeRelated(index)" title="删除此项">×</button>
               </div>
               <button class="add-btn" @click="addRelated">+ 添加作品</button>
             </div>
@@ -2372,20 +2404,59 @@ textarea::-webkit-scrollbar {
 }
 
 /* Pair Input Stylings */
+.type-select {
+  background: rgba(255, 105, 180, 0.1);
+  border: 1px solid rgba(255, 105, 180, 0.3);
+  color: #fff;
+  border-radius: 4px;
+  padding: 0 5px;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  height: 35px;
+  width: 65px;
+  flex-shrink: 0;
+}
+
+.type-select:hover {
+  background: rgba(255, 105, 180, 0.2);
+}
+
+.app-container.light-mode .type-select {
+  background: rgba(255, 105, 180, 0.05);
+  border: 1px solid rgba(255, 105, 180, 0.2);
+  color: #333;
+}
+
+.type-select option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.app-container.light-mode .type-select option {
+  background: #fff;
+  color: #333;
+}
+
 .pair-input {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
 .pair-input input {
   flex: 1;
+  min-width: 0;
 }
 
 .pair-input-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 8px;
+  width: 100%;
 }
 
 .remove-btn {

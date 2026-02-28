@@ -1,0 +1,18 @@
+{
+  "id": 8,
+  "name": "千早爱音之页",
+  "image": "/images/b750c13d-5a43-466e-8bd8-e7c035e34fb8.png",
+  "source": {
+    "name": "废墟图书馆",
+    "link": ""
+  },
+  "related": [],
+  "tags": [
+    "二创",
+    "游戏"
+  ],
+  "extension": [],
+  "introduction": "在图书馆击败千早爱音后获得的核心书页",
+  "x": -300.0,
+  "y": 500.0
+}

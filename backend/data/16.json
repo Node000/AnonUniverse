@@ -1,0 +1,19 @@
+{
+  "id": 16,
+  "name": "点单，老样子",
+  "image": "",
+  "source": {
+    "name": "BangDream手游",
+    "link": ""
+  },
+  "related": [],
+  "tags": [
+    "卡面"
+  ],
+  "extension": [
+    19
+  ],
+  "introduction": "",
+  "x": 400.0,
+  "y": 700.0
+}

@@ -1,0 +1,24 @@
+{
+  "id": 5,
+  "name": "唐哭",
+  "image": "/images/b72600a4-e0f1-410a-92b0-5db8133bda70.png",
+  "source": {
+    "name": "MyGO 第五集6分53秒",
+    "link": ""
+  },
+  "related": [
+    {
+      "name": "表情包",
+      "link": ""
+    }
+  ],
+  "tags": [
+    "原作",
+    "名场面",
+    "表情包"
+  ],
+  "extension": [],
+  "x": -200.0,
+  "y": -400.0,
+  "introduction": "第四五集中爱音的哭泣表情，广被称为\"唐哭\""
+}

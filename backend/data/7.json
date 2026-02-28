@@ -1,0 +1,23 @@
+{
+  "id": 7,
+  "name": "描绘未来爱音",
+  "image": "/images/449f3984-1045-4357-98c6-a7aa3fea75b4.png",
+  "source": {
+    "name": "《エガクミライ》MV",
+    "link": "https://www.bilibili.com/video/BV1pXpWzyEPD"
+  },
+  "related": [
+    {
+      "name": "MV",
+      "link": ""
+    }
+  ],
+  "tags": [
+    "原作",
+    "MV"
+  ],
+  "extension": [],
+  "x": -500.0,
+  "y": 100.0,
+  "introduction": "歌曲《エガクミライ》（描绘未来）MV中的爱音形象"
+}
