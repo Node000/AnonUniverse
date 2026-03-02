@@ -1,10 +1,11 @@
 {
   "id": 160,
   "name": "言力华爱音",
-  "image": "",
+  "image": "/images/c843e3c2-ba1c-4090-b525-07cb4cf457ba.webp",
   "source": {
     "name": "言力华",
-    "link": ""
+    "link": "https://space.bilibili.com/406868",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@言力华 所制作的爱音形象",
   "x": 421.71540477260237,
   "y": -985.5952358042008
 }

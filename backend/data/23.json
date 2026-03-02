@@ -1,17 +1,18 @@
 {
   "id": 23,
   "name": "连接的锚（特训后）",
-  "image": "",
+  "image": "/images/93bb9105-2c74-47a6-9529-6747bfcdf9de.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "三星卡面（特训后）",
   "x": -450.0,
   "y": 800.0
 }

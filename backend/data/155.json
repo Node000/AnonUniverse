@@ -1,10 +1,11 @@
 {
   "id": 155,
   "name": "表情包爱音",
-  "image": "",
+  "image": "/images/f4abe3a4-6e22-46d5-a9c4-36ff9e63dc03.webp",
   "source": {
     "name": "春野Haruya",
-    "link": ""
+    "link": "https://space.bilibili.com/3280",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -13,7 +14,7 @@
     "表情包"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@春野Haruya 所绘制的系列模板爱音表情包",
   "x": 181.02173501850075,
   "y": -894.5445124837547
 }

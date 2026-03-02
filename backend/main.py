@@ -10,6 +10,7 @@ import uuid
 import datetime
 import httpx
 import urllib.parse
+from PIL import Image
 
 app = FastAPI()
 
@@ -319,12 +320,18 @@ def add_node(
     
     image_url = ""
     if image:
-        ext = image.filename.split(".")[-1]
-        filename = f"{uuid.uuid4()}.{ext}"
+        filename = f"{uuid.uuid4()}.webp"
         filepath = os.path.join(IMAGES_DIR, filename)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-        image_url = f"/images/{filename}"
+        try:
+            with Image.open(image.file) as img:
+                if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+                    img = img.convert("RGBA")
+                else:
+                    img = img.convert("RGB")
+                img.save(filepath, "WEBP")
+            image_url = f"/images/{filename}"
+        except Exception as e:
+            raise HTTPException(500, f"Image processing failed: {str(e)}")
     
     new_node = {
         "id": new_id,
@@ -382,17 +389,25 @@ def update_node(
     if image:
         # Delete old image if it exists and is not default
         old_image = node.get("image", "")
-        if old_image and not old_image.endswith("default.png") and old_image.startswith("/images/"):
+        # Check if old_image is not default (simplified check for 'default')
+        if old_image and "default" not in old_image and old_image.startswith("/images/"):
             try:
                 os.remove(old_image.lstrip("/"))
             except: pass
 
-        ext = image.filename.split(".")[-1]
-        filename = f"{uuid.uuid4()}.{ext}"
+        filename = f"{uuid.uuid4()}.webp"
         filepath = os.path.join(IMAGES_DIR, filename)
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-        node["image"] = f"/images/{filename}"
+        try:
+            with Image.open(image.file) as img:
+                # Handle transparency
+                if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+                    img = img.convert("RGBA")
+                else:
+                    img = img.convert("RGB")
+                img.save(filepath, "WEBP")
+            node["image"] = f"/images/{filename}"
+        except Exception as e:
+            raise HTTPException(500, f"Image processing failed: {str(e)}")
         
     node["name"] = name
     node["source"] = json.loads(source)

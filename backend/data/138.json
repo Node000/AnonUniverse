@@ -1,10 +1,11 @@
 {
   "id": 138,
   "name": "栗木爱音",
-  "image": "",
+  "image": "/images/35eb6a0a-ea61-4e23-b9a7-da63d8fe78e0.webp",
   "source": {
-    "name": "栗木",
-    "link": ""
+    "name": "巴拉巴拉的栗木",
+    "link": "https://space.bilibili.com/32830908",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@巴拉巴拉的栗木 所绘制的爱音形象",
   "x": 169.638368692423,
   "y": -258.76996107460315
 }

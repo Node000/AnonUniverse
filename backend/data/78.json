@@ -1,19 +1,27 @@
 {
   "id": 78,
   "name": "若C团和解爱音",
-  "image": "",
+  "image": "/images/205cb719-29ec-42ac-890a-538683ef24c5.webp",
   "source": {
-    "name": "假如crychic和平解散的话",
-    "link": ""
+    "name": "[安科] [同人] [MYGO][已完结]如果说CRYCHIC和平解散的话…………",
+    "link": "https://bbs.nga.cn/read.php?tid=39582158",
+    "type": "小说"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "【安科xMyGO】如果说crychic和平解散的话#1",
+      "link": "https://www.bilibili.com/video/BV1HS411N7wV",
+      "type": "视频"
+    }
+  ],
   "tags": [
-    "二创"
+    "二创",
+    "剧情向"
   ],
   "extension": [
     101
   ],
-  "introduction": "",
+  "introduction": "二创《如果说crychic和平解散的话》中的爱音\r\n原作者B站：@守夜口渴怪\r\nB站视频化作者：@llama-wei",
   "x": 730.1811607817517,
   "y": 541.7966266461733,
   "is_famous": true

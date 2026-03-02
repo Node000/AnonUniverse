@@ -1,17 +1,18 @@
 {
   "id": 15,
   "name": "和潇洒的花",
-  "image": "",
+  "image": "/images/6bcc9dc7-53dc-45bb-93b2-bffdae8807e5.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二星卡面",
   "x": 300.0,
   "y": 800.0
 }

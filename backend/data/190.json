@@ -1,17 +1,18 @@
 {
   "id": 190,
   "name": "崩坏联动爱音",
-  "image": "",
+  "image": "/images/3e472f1b-e9c7-4f83-8d12-73ea22b7b74f.webp",
   "source": {
     "name": "崩2与MyGO联动",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
     "联动"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "崩坏学园2与It's MyGO!!!!!联动所派生的爱音形象",
   "x": 84.32746047774053,
   "y": -124.05192223168132
 }

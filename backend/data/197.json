@@ -1,10 +1,11 @@
 {
   "id": 197,
   "name": "歌鸣爱音",
-  "image": "",
+  "image": "/images/6eb883c1-c890-4bf1-8359-890683658233.webp",
   "source": {
     "name": "《歌いましょう鳴らしましょう》MV",
-    "link": "https://www.bilibili.com/video/BV1mH4y1U7M9"
+    "link": "https://www.bilibili.com/video/BV1mH4y1U7M9",
+    "type": "视频"
   },
   "related": [],
   "tags": [

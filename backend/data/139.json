@@ -1,10 +1,11 @@
 {
   "id": 139,
   "name": "画失联爱音",
-  "image": "",
+  "image": "/images/58072c64-abf9-47c0-b9d1-372147c5626c.webp",
   "source": {
     "name": "画失联",
-    "link": ""
+    "link": "https://space.bilibili.com/397979102",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@画失联 所绘制的爱音形象",
   "x": 387.41926775663535,
   "y": -551.5692155261723
 }

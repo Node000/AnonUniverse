@@ -1,10 +1,11 @@
 {
   "id": 195,
   "name": "轮符雨爱音",
-  "image": "",
+  "image": "/images/d2ab5601-5c9a-4f7b-a22a-d2c407788e8b.webp",
   "source": {
     "name": "《輪符雨》MV",
-    "link": "https://www.bilibili.com/video/BV1rC41157Ci"
+    "link": "https://www.bilibili.com/video/BV1rC41157Ci",
+    "type": "视频"
   },
   "related": [],
   "tags": [

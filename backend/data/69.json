@@ -1,20 +1,22 @@
 {
   "id": 69,
   "name": "TGW集团",
-  "image": "",
+  "image": "/images/13c4ec7b-6918-46df-8253-42e19f1f7119.webp",
   "source": {
     "name": "Ave Mujica第五集15分",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
     "原作",
-    "TGW"
+    "TGW",
+    "表情截图"
   ],
   "extension": [
     172
   ],
-  "introduction": "",
+  "introduction": "出自Ave Mujica第五集15分处，因魔性动作+音乐而被广传",
   "x": -22.83750108754137,
   "y": 387.28386629494776
 }

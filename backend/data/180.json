@@ -1,17 +1,18 @@
 {
   "id": 180,
   "name": "日常爱音",
-  "image": "",
+  "image": "/images/481e1dcf-1fc6-4e00-ba10-37541913ea6f.webp",
   "source": {
     "name": "MyGO!!!!!成员的日常生活",
-    "link": ""
+    "link": "https://www.bilibili.com/video/BV13vKRzzELj",
+    "type": "视频"
   },
   "related": [],
   "tags": [
     "官方"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "出自官方短篇《MyGO!!!!!成员的日常生活》",
   "x": -440.342793986102,
   "y": -1017.5411186864371
 }

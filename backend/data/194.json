@@ -1,10 +1,11 @@
 {
   "id": 194,
   "name": "诗超绊爱音",
-  "image": "",
+  "image": "/images/e26c4ca4-9a9b-40ad-ab87-252d443aced8.webp",
   "source": {
     "name": "《詩超絆》MV",
-    "link": "https://www.bilibili.com/video/BV1kj411i7ZY"
+    "link": "https://www.bilibili.com/video/BV1kj411i7ZY",
+    "type": "视频"
   },
   "related": [],
   "tags": [

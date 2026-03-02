@@ -1,19 +1,22 @@
 {
   "id": 1,
   "name": "正剧爱音",
-  "image": "/images/default.png",
+  "image": "/images/87ff6eed-31a9-4bfb-9e25-bd03a969e05f.webp",
   "source": {
     "name": "BanG Dream! It's MyGO!!!!!",
-    "link": "https://www.bilibili.com/bangumi/play/ep1183102"
+    "link": "https://www.bilibili.com/bangumi/play/ep1183102",
+    "type": "视频"
   },
   "related": [
     {
       "name": "MyGO!!!!!",
-      "link": ""
+      "link": "",
+      "type": "其他"
     },
     {
       "name": "Ave Mujica",
-      "link": ""
+      "link": "",
+      "type": "其他"
     }
   ],
   "tags": [

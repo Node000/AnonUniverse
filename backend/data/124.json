@@ -1,10 +1,11 @@
 {
   "id": 124,
   "name": "Anon犬",
-  "image": "",
+  "image": "/images/d1ec321f-7e6c-40b0-8875-ed4e8e588065.webp",
   "source": {
     "name": "二次创作",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "AI"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "以官方娃娃为原型，使用AI工具生成的犬拟爱音形象\r\n（图源B站：@CJZ吃橘子）",
   "x": -320.0,
   "y": -762.0
 }

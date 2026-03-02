@@ -1,7 +1,7 @@
 {
   "id": 4,
   "name": "手游立绘爱音",
-  "image": "/images/default.png",
+  "image": "/images/e8f46291-73b4-4006-a4a1-5c95c7f47335.webp",
   "source": {
     "name": "BanG Dream! 少女乐团派对",
     "link": "https://game.bilibili.com/bangdream",
@@ -56,7 +56,6 @@
     84,
     85,
     86,
-    87,
     88,
     89,
     91,
@@ -84,9 +83,10 @@
     208,
     209,
     210,
-    211
+    211,
+    213
   ],
-  "x": 300.0,
-  "y": 300.0,
+  "x": 1522.0,
+  "y": 90.0,
   "introduction": "BanG Dream!官方手游剧情中的爱音立绘形象"
 }

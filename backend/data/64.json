@@ -1,19 +1,21 @@
 {
   "id": 64,
   "name": "黑爱音",
-  "image": "",
+  "image": "/images/d74eb568-921a-4709-91f7-b678b7110509.webp",
   "source": {
-    "name": "Mygo!!黑化爱音",
-    "link": ""
+    "name": "【mygo!黑化爱音】第一集 暗潮涌动",
+    "link": "https://www.bilibili.com/video/BV1omtLePELS",
+    "type": "视频"
   },
   "related": [],
   "tags": [
     "二创",
     "退队",
-    "黑化"
+    "黑化",
+    "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《MyGO!!黑化爱音》中的爱音形象\r\nB站作者：@青雲不由美",
   "x": 391.17620382504134,
   "y": -395.91644912568773
 }

@@ -1,10 +1,11 @@
 {
   "id": 159,
   "name": "恋活模型爱音",
-  "image": "",
+  "image": "/images/82637211-6869-478c-bb66-285c6cdcf7bd.webp",
   "source": {
     "name": "恋爱活动",
-    "link": ""
+    "link": "",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
@@ -13,7 +14,7 @@
     "游戏"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "在《恋爱活动》游戏里运行的3D爱音模型（需通过整合包安装）",
   "x": 321.4238794797391,
   "y": -1378.5583709374844
 }

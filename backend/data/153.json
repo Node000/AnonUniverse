@@ -1,10 +1,11 @@
 {
   "id": 153,
   "name": "Lyy爱音/小漫画爱音",
-  "image": "",
+  "image": "/images/a8b87d2e-7ee8-43c7-b48a-966d98f7169d.webp",
   "source": {
     "name": "lyytoaoitori",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "圈内高知名度的小漫画爱音形象。\r\n出自X（推特）作者：@lyytoaoitori",
   "x": 90.98787358433268,
   "y": -779.3680615469349
 }

@@ -1,10 +1,11 @@
 {
   "id": 179,
   "name": "人物篇爱音",
-  "image": "",
+  "image": "/images/3a488666-c03f-4af6-a633-7213bffcb661.webp",
   "source": {
     "name": "官方账号",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -15,7 +16,7 @@
     180,
     181
   ],
-  "introduction": "",
+  "introduction": "官方账号中较早的爱音形象",
   "x": 25.69427656146631,
   "y": -638.6290454587001
 }

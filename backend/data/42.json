@@ -1,10 +1,11 @@
 {
   "id": 42,
   "name": "千早文乃",
-  "image": "",
+  "image": "/images/be3d46ef-df95-482f-b3f0-4d80fde0c9b1.webp",
   "source": {
-    "name": "千早爱音回到过去",
-    "link": ""
+    "name": "【爱素/纯糖无刀】#1千早爱音回到过去（重制版）",
+    "link": "https://www.bilibili.com/video/BV1Xu4m1K7Bb",
+    "type": "视频"
   },
   "related": [],
   "tags": [
@@ -13,7 +14,7 @@
     "假身份"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "《千早爱音回到过去》中爱音的假身形象",
   "x": 210.68083711516547,
   "y": -637.8213264347412
 }

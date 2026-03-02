@@ -1,10 +1,11 @@
 {
   "id": 144,
   "name": "芸草冰爱音",
-  "image": "",
+  "image": "/images/4ccad467-f1b3-4292-acd6-95c22c52d25f.webp",
   "source": {
     "name": "芸草冰",
-    "link": ""
+    "link": "https://space.bilibili.com/78595419",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@芸草冰 所绘制的爱音形象",
   "x": 443.32142214344367,
   "y": -552.7893853944304
 }

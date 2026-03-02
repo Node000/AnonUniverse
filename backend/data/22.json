@@ -1,17 +1,18 @@
 {
   "id": 22,
   "name": "我们要去找她吗（特训后）",
-  "image": "",
+  "image": "/images/cb7809ed-8a43-487d-b99b-fd16c5bbd520.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "三星卡面（特训后）",
   "x": -250.0,
   "y": 850.0
 }

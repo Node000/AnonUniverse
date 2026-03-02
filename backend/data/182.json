@@ -1,10 +1,11 @@
 {
   "id": 182,
   "name": "影色舞爱音",
-  "image": "",
+  "image": "/images/6ddba845-103a-4e08-b621-c8d9be2fc296.webp",
   "source": {
-    "name": "影色舞MV",
-    "link": ""
+    "name": "《影色舞》MV",
+    "link": "https://www.bilibili.com/video/BV1gP411u7kS",
+    "type": "视频"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "MV"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "歌曲《影色舞》MV中的爱音形象",
   "x": -420.55494220887715,
   "y": -1322.5421637118975
 }

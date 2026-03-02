@@ -1,28 +1,32 @@
 {
   "id": 62,
   "name": "灰爱音",
-  "image": "",
+  "image": "/images/5d1f121c-5932-411a-a865-d1e809f10622.webp",
   "source": {
     "name": "[同人][MyGO]少女们的逆行[完结]",
-    "link": "https://ngabbs.com/read.php?tid=37913013"
+    "link": "https://ngabbs.com/read.php?tid=37913013",
+    "type": "小说"
   },
   "related": [
     {
       "name": "少女们的逆行#1 乐队",
-      "link": "https://www.bilibili.com/video/BV1zV411X78m"
+      "link": "https://www.bilibili.com/video/BV1zV411X78m",
+      "type": "视频"
     },
     {
       "name": "【AI爱音】機械心",
-      "link": "https://www.bilibili.com/video/BV1hm411d7wc"
+      "link": "https://www.bilibili.com/video/BV1hm411d7wc",
+      "type": "视频"
     }
   ],
   "tags": [
     "二创",
     "退队",
-    "灰爱音"
+    "灰爱音",
+    "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《少女们的逆行》中的爱音形象\r\n原作者NGA：@影愿孤星\r\n原作者LOFTER：@如繁星者\r\nB站视频化作者：@毒奶猫圆圆\r\n图LOFTER：@Ekkorin",
   "x": 916.2936423066908,
   "y": -273.27779375440457,
   "is_famous": true

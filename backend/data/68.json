@@ -1,17 +1,19 @@
 {
   "id": 68,
   "name": "《技术超好的粉毛》",
-  "image": "",
+  "image": "/images/2235b4da-ce54-48a1-ab7d-c96171209e1d.webp",
   "source": {
     "name": "《壱雫空》弹幕",
-    "link": ""
+    "link": "https://www.bilibili.com/bangumi/play/ep1185676",
+    "type": "视频"
   },
   "related": [],
   "tags": [
-    "弹幕"
+    "弹幕",
+    "角色昵称"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "因前期爱慕虚荣的表现而延伸出来的调侃，常出现在片头曲《壱雫空》的弹幕中",
   "x": 398.4242537901837,
   "y": -420.3732858340278
 }

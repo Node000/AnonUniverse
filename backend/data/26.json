@@ -1,10 +1,11 @@
 {
   "id": 26,
   "name": "一边迷茫着",
-  "image": "",
+  "image": "/images/42fca850-4185-4e70-aae1-a7e182a7af3f.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
@@ -13,7 +14,7 @@
   "extension": [
     27
   ],
-  "introduction": "",
+  "introduction": "五星卡面（特训前）",
   "x": -222.69972824270468,
   "y": -347.4202328558747
 }

@@ -1,10 +1,11 @@
 {
   "id": 60,
   "name": "狗9鸡7爱音",
-  "image": "",
+  "image": "/images/34fff7fa-1d48-40a7-89e2-d7513276cce5.webp",
   "source": {
     "name": "MyGO!!!!!第九话&Ave Mujica第七话",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -13,7 +14,7 @@
   "extension": [
     61
   ],
-  "introduction": "",
+  "introduction": "两集剧情里的爱音多被描述为“不被需要的”",
   "x": -153.93218480763926,
   "y": 564.4227178022339
 }

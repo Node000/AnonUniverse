@@ -1,17 +1,18 @@
 {
   "id": 31,
   "name": "领导推荐（特训后）",
-  "image": "",
+  "image": "/images/b0d9d645-d12a-4168-8e0a-b6662b84f3ba.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
-  "x": 364.32826192375853,
-  "y": 60.179922102372906
+  "introduction": "三星卡面（特训后）",
+  "x": 1046.0,
+  "y": 2088.0
 }

@@ -1,10 +1,11 @@
 {
   "id": 98,
   "name": "Anon Tokyo",
-  "image": "",
+  "image": "/images/dadb0627-141e-4a6e-8f22-f3c30110143f.webp",
   "source": {
     "name": "BanG Dream! It's MyGO!!!!!",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "乐队"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "剧中爱音想要建立的以自己为中心的乐队“Anon Tokyo”。\r\n官方曾在愚人节玩过此梗",
   "x": -139.2594361965012,
   "y": -55.738760573164974
 }

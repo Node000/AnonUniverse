@@ -1,10 +1,11 @@
 {
   "id": 174,
   "name": "桃课P-三渲二爱音",
-  "image": "",
+  "image": "/images/4f393f98-48ac-46db-a767-ea108738cd94.webp",
   "source": {
     "name": "桃课P",
-    "link": ""
+    "link": "https://space.bilibili.com/3546378498214326",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "3D形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@桃课P 所制作的爱音形象",
   "x": 377.2011555683157,
   "y": -1619.589932845331
 }

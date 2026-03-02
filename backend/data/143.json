@@ -1,10 +1,11 @@
 {
   "id": 143,
   "name": "面包娟子爱音",
-  "image": "",
+  "image": "/images/84e07ee2-a5f0-486d-8c81-ef53632acf68.webp",
   "source": {
     "name": "面包娟子",
-    "link": ""
+    "link": "https://space.bilibili.com/37859073",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@面包娟子 所绘制的爱音形象",
   "x": 245.47823611819206,
   "y": -509.7687456667889
 }

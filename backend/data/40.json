@@ -1,17 +1,20 @@
 {
   "id": 40,
   "name": "爱音手游小人",
-  "image": "",
+  "image": "/images/8beef717-bf0a-4a8c-891f-1c7f42612009.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
-    "Q版"
+    "官方",
+    "Q版",
+    "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "手游里的爱音小人",
   "x": 532.6779785787988,
   "y": 16.29248782111211
 }

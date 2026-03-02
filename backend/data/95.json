@@ -1,17 +1,19 @@
 {
   "id": 95,
   "name": "羽丘跑女/羽丘体育生",
-  "image": "",
+  "image": "/images/7b22b5b9-fca0-46a7-8ce2-78f76375ca3c.webp",
   "source": {
     "name": "MyGO!!!!!第九集19分20秒/Ave Mujica第五集18分10秒",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
-    "原作"
+    "原作",
+    "性格特质"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "因展现队内最强跑步能手而得名",
   "x": 98.42733608611837,
   "y": -113.19036845505143
 }

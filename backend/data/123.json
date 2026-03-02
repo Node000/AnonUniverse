@@ -1,10 +1,11 @@
 {
   "id": 123,
   "name": "官方爱音娃娃",
-  "image": "",
+  "image": "/images/9ef7f348-218c-4635-94a0-b0f7abd6768f.webp",
   "source": {
     "name": "BangDream It's MyGO!!!!!",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [

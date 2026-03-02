@@ -1,10 +1,11 @@
 {
   "id": 120,
   "name": "粉色奶龙",
-  "image": "",
+  "image": "/images/bb156795-606a-4a39-8ae9-7ad7fdd9ff94.webp",
   "source": {
     "name": "？",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [

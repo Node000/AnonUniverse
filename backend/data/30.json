@@ -1,10 +1,11 @@
 {
   "id": 30,
   "name": "领导推荐",
-  "image": "",
+  "image": "/images/95e93ec0-0301-4c99-a802-265d0e7fd0fb.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
@@ -13,7 +14,7 @@
   "extension": [
     31
   ],
-  "introduction": "",
+  "introduction": "三星卡面（特训前）",
   "x": 203.8606165607536,
   "y": 165.44422719269863
 }

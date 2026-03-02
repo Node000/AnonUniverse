@@ -1,10 +1,11 @@
 {
   "id": 67,
   "name": "我C怎样？",
-  "image": "",
+  "image": "/images/ba5a3110-3500-48e2-9a5b-f52e962a6e65.webp",
   "source": {
     "name": "MyGO!!!!!第四集19分40秒",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -14,7 +15,7 @@
   "extension": [
     68
   ],
-  "introduction": "",
+  "introduction": "炫耀会弹C和弦的爱音",
   "x": 454.3136257037205,
   "y": 607.1285439468949
 }

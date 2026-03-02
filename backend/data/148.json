@@ -1,10 +1,11 @@
 {
   "id": 148,
   "name": "龍龍爱音",
-  "image": "",
+  "image": "/images/d19172ab-5b65-4623-94a1-be412aff08ea.webp",
   "source": {
     "name": "Drasdr龍龍",
-    "link": ""
+    "link": "https://space.bilibili.com/382699791",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@Drasdr龍龍 所绘制的爱音形象",
   "x": 448.33995805692,
   "y": -820.4008186506028
 }

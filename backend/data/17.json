@@ -1,17 +1,18 @@
 {
   "id": 17,
   "name": "让我们开始一生吧",
-  "image": "",
+  "image": "/images/173fb0b3-0f82-4aa3-b386-2eb6d2303549.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二星卡面",
   "x": 500.0,
   "y": 700.0
 }

@@ -1,10 +1,11 @@
 {
   "id": 192,
   "name": "碧天伴走爱音",
-  "image": "",
+  "image": "/images/739da91a-f174-4207-ae1d-215e77907848.webp",
   "source": {
     "name": "《碧天伴走》MV",
-    "link": "https://www.bilibili.com/video/BV1P8411U7mr"
+    "link": "https://www.bilibili.com/video/BV1P8411U7mr",
+    "type": "视频"
   },
   "related": [],
   "tags": [

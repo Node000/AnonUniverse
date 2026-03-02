@@ -1,17 +1,18 @@
 {
   "id": 12,
   "name": "盈盈意",
-  "image": "",
+  "image": "/images/fb92f923-82d9-4510-8eb7-079afe2f2254.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二星卡面",
   "x": 0.0,
   "y": 800.0
 }

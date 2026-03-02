@@ -1,10 +1,11 @@
 {
   "id": 189,
   "name": "夜隐染爱音",
-  "image": "",
+  "image": "/images/034000af-1f6f-4438-8814-2b4cfd4339db.webp",
   "source": {
     "name": "《夜隠染》MV",
-    "link": "https://www.bilibili.com/video/BV12ekcYoEJi"
+    "link": "https://www.bilibili.com/video/BV12ekcYoEJi",
+    "type": "视频"
   },
   "related": [],
   "tags": [

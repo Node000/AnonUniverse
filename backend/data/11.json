@@ -1,17 +1,18 @@
 {
   "id": 11,
   "name": "乐队的核心人物",
-  "image": "",
+  "image": "/images/15c1b25c-b9a2-4b6f-ac3a-58ed65cfec5c.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "一星卡面",
   "x": -100.0,
   "y": 800.0
 }

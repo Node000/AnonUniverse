@@ -1,17 +1,18 @@
 {
   "id": 37,
   "name": "作为赏花的纪念（特训后）",
-  "image": "",
+  "image": "/images/80fadfc5-809f-49c5-98fc-f2f6349fd947.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "五星卡面（特训后）",
   "x": -244.17663774195137,
   "y": 38.57163918136837
 }

@@ -1,10 +1,11 @@
 {
   "id": 151,
   "name": "修仙/古风爱音",
-  "image": "",
+  "image": "/images/a668be65-eb11-4bed-b134-45be1e483517.webp",
   "source": {
     "name": "AI二次创作",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -13,7 +14,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "将爱音用AI等手段与古风/修仙题材相结合的爱音形象",
   "x": 357.1146281127857,
   "y": -714.0728513374218
 }

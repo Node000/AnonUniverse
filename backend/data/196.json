@@ -1,10 +1,11 @@
 {
   "id": 196,
   "name": "处救生爱音",
-  "image": "",
+  "image": "/images/6baa47a2-bc27-4e6b-9c3e-eda519896872.webp",
   "source": {
     "name": "《処救生》MV",
-    "link": "https://www.bilibili.com/video/BV1Vi4y1z7vu"
+    "link": "https://www.bilibili.com/video/BV1Vi4y1z7vu",
+    "type": "视频"
   },
   "related": [],
   "tags": [

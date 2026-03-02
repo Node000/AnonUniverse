@@ -1,10 +1,11 @@
 {
   "id": 165,
   "name": "爱音斯坦",
-  "image": "",
+  "image": "/images/fe54b170-5560-45e9-8f09-f3743aa0bf2f.webp",
   "source": {
     "name": "？",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [

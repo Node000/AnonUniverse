@@ -1,17 +1,18 @@
 {
   "id": 13,
   "name": "MyGO!!!!!",
-  "image": "",
+  "image": "/images/08df2043-e05b-4613-a220-b387783913fa.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二星卡面",
   "x": 100.0,
   "y": 800.0
 }

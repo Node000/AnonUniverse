@@ -1,10 +1,11 @@
 {
   "id": 177,
   "name": "D站模型爱音",
-  "image": "",
+  "image": "/images/0dd58180-ce67-4028-ab80-6f8619cd71a2.webp",
   "source": {
     "name": "DeviantArt",
-    "link": ""
+    "link": "https://deviantart.cc/",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "3D形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "DeviantArt上用户Bungle Scrungle所分享的Craft Egg爱音模型（暂议）（一些视频借物表中出现by_countc/countc，暂不知来源）",
   "x": 346.2288112937315,
   "y": -1641.3561258885804
 }

@@ -1,10 +1,11 @@
 {
   "id": 142,
   "name": "吐崽子爱音",
-  "image": "",
+  "image": "/images/b210062c-4257-4f88-b763-35b4d37bb93a.webp",
   "source": {
     "name": "吐崽子",
-    "link": ""
+    "link": "https://www.pixiv.net/users/30842525",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "Pixiv作者：@吐崽子 所绘制的爱音形象",
   "x": 338.0007713751368,
   "y": -770.4462266616498
 }

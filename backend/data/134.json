@@ -1,17 +1,18 @@
 {
   "id": 134,
   "name": "千早爱音吐槽吧",
-  "image": "",
+  "image": "/images/64fb61cf-0be2-4ef9-ad7f-b82a02b76a70.webp",
   "source": {
-    "name": "贴吧",
-    "link": "https://tieba.baidu.com/f?kw=%E5%8D%83%E6%97%A9%E7%88%B1%E9%9F%B3%E5%90%90%E6%A7%BD"
+    "name": "千早爱音吐槽吧",
+    "link": "https://tieba.baidu.com/f?kw=%E5%8D%83%E6%97%A9%E7%88%B1%E9%9F%B3%E5%90%90%E6%A7%BD",
+    "type": "其他"
   },
   "related": [],
   "tags": [
     "贴吧"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "针对千早爱音及其粉丝群体进行吐槽的贴吧",
   "x": -129.47762399478304,
   "y": -75.73338025379287
 }

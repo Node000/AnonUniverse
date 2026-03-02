@@ -1,18 +1,21 @@
 {
   "id": 9,
   "name": "余命十年爱音",
-  "image": "",
+  "image": "/images/25412486-6d88-4fb2-a3f3-db5d2c7e4f50.webp",
   "source": {
-    "name": "余命十年",
-    "link": ""
+    "name": "【mygo/ansy】余命十年#1",
+    "link": "https://www.bilibili.com/video/BV1Tw411J7y3",
+    "type": "视频"
   },
   "related": [],
   "tags": [
     "二创",
-    "爱素"
+    "爱素",
+    "死亡",
+    "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《余命十年》中的爱音，因患上绝症，至多再活十年\r\n作者B站：@过客古城",
   "x": 600.0,
   "y": 400.0,
   "is_famous": true

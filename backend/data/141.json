@@ -1,10 +1,11 @@
 {
   "id": 141,
   "name": "总池爱音",
-  "image": "",
+  "image": "/images/a4dd1e16-e8f6-44db-b49b-207c66398be5.webp",
   "source": {
     "name": "总池",
-    "link": ""
+    "link": "https://space.bilibili.com/4585324",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@总池 所绘制的爱音形象",
   "x": 420.7285922745114,
   "y": -477.9797382198031
 }

@@ -1,17 +1,18 @@
 {
   "id": 14,
   "name": "去水族馆",
-  "image": "",
+  "image": "/images/3006a137-7a19-45d6-8c9c-984f1d46ae6c.webp",
   "source": {
-    "name": "BangDream",
-    "link": "手游"
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
-    ""
+    "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二星卡面",
   "x": 200.0,
   "y": 800.0
 }

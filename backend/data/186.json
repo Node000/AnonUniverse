@@ -1,10 +1,11 @@
 {
   "id": 186,
   "name": "官漫爱音",
-  "image": "",
+  "image": "/images/d4bfa6fb-a26c-4567-a401-9094a5999881.webp",
   "source": {
     "name": "MyGO!!!!!官方漫画《雨中祈晴》",
-    "link": ""
+    "link": "",
+    "type": "漫画"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "漫画"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "MyGO!!!!!官方漫画《雨中祈晴》中的爱音形象",
   "x": -61.123881869297705,
   "y": 136.98127998098187
 }

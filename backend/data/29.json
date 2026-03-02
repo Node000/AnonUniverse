@@ -1,17 +1,18 @@
 {
   "id": 29,
   "name": "醒来打哈欠时间（特训后）",
-  "image": "",
+  "image": "/images/73a6cc30-9a8b-479c-954e-5f66c5e4b16f.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "其他"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "五星卡面（特训后）",
   "x": 254.45718292603846,
   "y": 132.13255825648613
 }

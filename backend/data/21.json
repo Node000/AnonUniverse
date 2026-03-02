@@ -1,10 +1,11 @@
 {
   "id": 21,
   "name": "连接的锚",
-  "image": "",
+  "image": "/images/fdc390d1-fc3e-43ea-b93d-ee283e344f5a.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
@@ -13,7 +14,7 @@
   "extension": [
     23
   ],
-  "introduction": "",
+  "introduction": "三星卡面（特训前）",
   "x": -350.0,
   "y": 650.0
 }

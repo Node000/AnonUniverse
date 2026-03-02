@@ -1,10 +1,11 @@
 {
   "id": 154,
   "name": "元祖爱音",
-  "image": "",
+  "image": "/images/731e25e1-58c9-450c-82f8-3bb46e42f019.webp",
   "source": {
     "name": "元祖！BanG Dream Chan",
-    "link": ""
+    "link": "",
+    "type": "视频"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "Q版"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "《元祖！BanG Dream Chan》中的爱音形象",
   "x": 144.03991779002172,
   "y": 41.862896257232144
 }

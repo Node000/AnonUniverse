@@ -1,17 +1,18 @@
 {
   "id": 25,
   "name": "关系好的对象是（特训后）",
-  "image": "",
+  "image": "/images/2ec263e7-e52e-4198-8112-e8a83a8585d8.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "三星卡面（特训后）",
   "x": 350.0,
   "y": 550.0
 }

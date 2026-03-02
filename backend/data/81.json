@@ -1,17 +1,20 @@
 {
   "id": 81,
   "name": "经开退爱音",
-  "image": "",
+  "image": "/images/a365bd95-4680-4e92-ba75-4af6837ec02c.webp",
   "source": {
-    "name": "经典开局退团，但是爱音",
-    "link": ""
+    "name": "【MyGO】经典开局退团，但是爱音　#1",
+    "link": "https://www.bilibili.com/video/BV15C411W7Qo",
+    "type": "视频"
   },
   "related": [],
   "tags": [
-    "二创"
+    "二创",
+    "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《经典开局退团，但是爱音》中的爱音\r\n作者B站：@ZihYe子夜",
   "x": 504.0675109006962,
-  "y": 455.6191976483008
+  "y": 455.6191976483008,
+  "is_famous": true
 }

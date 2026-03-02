@@ -1,17 +1,18 @@
 {
   "id": 39,
   "name": "傍晚的密会（特训后）",
-  "image": "",
+  "image": "/images/2de418d2-739c-47dd-8538-a8b7367a1cae.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "五星卡面（特训后）",
   "x": -146.95810789420892,
   "y": -206.06075585371534
 }

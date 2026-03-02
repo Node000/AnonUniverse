@@ -1,10 +1,11 @@
 {
   "id": 145,
   "name": "天国地狱爱音",
-  "image": "",
+  "image": "/images/58aa30f7-a61e-4103-b3f4-c055d1724101.webp",
   "source": {
-    "name": "你想不想",
-    "link": ""
+    "name": "你憩不憩",
+    "link": "https://space.bilibili.com/11575392",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@你憩不憩 所绘制的爱音形象",
   "x": 167.52913891634307,
   "y": -611.990849159789
 }

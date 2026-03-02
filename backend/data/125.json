@@ -1,19 +1,21 @@
 {
   "id": 125,
   "name": "伦敦逃兵",
-  "image": "",
+  "image": "/images/6c54a020-7b72-454f-829e-49b9e7fde7e3.webp",
   "source": {
     "name": "BanG Dream! It's MyGO!!!!!",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
-    "经历"
+    "原作",
+    "角色昵称"
   ],
   "extension": [
     126
   ],
-  "introduction": "",
+  "introduction": "对于剧情中爱音区英国伦敦留学失败的经历的调侃",
   "x": 33.03957743664587,
   "y": -146.31604943685392
 }

@@ -1,19 +1,21 @@
 {
   "id": 97,
   "name": "Ann",
-  "image": "",
+  "image": "/images/cd1889d2-df5b-4ef4-b3de-3f7f28b9026e.webp",
   "source": {
     "name": "BangDream It's MyGO!!!!!",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
     "原作",
     "留学",
-    "英国"
+    "英国",
+    "角色昵称"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "剧中爱音留学时被叫错而来的误称",
   "x": -73.71354316169416,
   "y": -130.63810146564842
 }

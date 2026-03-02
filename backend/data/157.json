@@ -1,10 +1,11 @@
 {
   "id": 157,
   "name": "桃课P爱音",
-  "image": "",
+  "image": "/images/c1ddb510-7781-42ce-a7bf-68353045345d.webp",
   "source": {
     "name": "桃课P",
-    "link": ""
+    "link": "https://space.bilibili.com/3546378498214326",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@桃课P 所制作的爱音形象",
   "x": 227.25749475847311,
   "y": -1022.9155332920454
 }

@@ -1,10 +1,11 @@
 {
   "id": 146,
   "name": "某火柴灬灬爱音",
-  "image": "",
+  "image": "/images/2d8501db-0779-4c45-9a24-57e27960d6a5.webp",
   "source": {
     "name": "某火柴灬灬",
-    "link": ""
+    "link": "https://space.bilibili.com/435531167",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@某火柴灬灬 所绘制的爱音形象",
   "x": 405.1996436940575,
   "y": -780.7416100826426
 }

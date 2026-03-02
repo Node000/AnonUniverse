@@ -1,10 +1,11 @@
 {
   "id": 161,
   "name": "坏坏子爱音",
-  "image": "",
+  "image": "/images/4b9ebf8a-c46a-492d-8140-c8e86b78d98a.webp",
   "source": {
     "name": "北野花雾坏坏子",
-    "link": ""
+    "link": "https://space.bilibili.com/2124910444",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "3D形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@北野花雾坏坏子 所制作的爱音形象\r\n（高度还原正剧形象）",
   "x": 202.7897598453453,
   "y": -1265.0020790831197
 }

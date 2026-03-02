@@ -1,17 +1,18 @@
 {
   "id": 133,
   "name": "千早爱音吧",
-  "image": "",
+  "image": "/images/02ad0575-01d7-49b4-aa69-25c1c670aea8.webp",
   "source": {
-    "name": "百度贴吧",
-    "link": ""
+    "name": "千早爱音吧",
+    "link": "https://tieba.baidu.com/f?fr=home&kw=%E5%8D%83%E6%97%A9%E7%88%B1%E9%9F%B3",
+    "type": "其他"
   },
   "related": [],
   "tags": [
     "贴吧"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "贴吧上公认的千早爱音个人吧",
   "x": -138.34021617091196,
   "y": 57.982623170958306
 }

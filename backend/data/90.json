@@ -1,18 +1,25 @@
 {
   "id": 90,
   "name": "宽窄门爱音",
-  "image": "",
+  "image": "/images/373ef445-4e57-4236-812c-9f757d19724e.webp",
   "source": {
     "name": "宽窄门",
-    "link": ""
+    "link": "https://ivy5538004.lofter.com/post/7406cc63_2bcbe45d4",
+    "type": "小说"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "【爱素/Ansy】宽窄门#1",
+      "link": "https://www.bilibili.com/video/BV1WM4m1R7Xt",
+      "type": "视频"
+    }
+  ],
   "tags": [
     "二创",
     "爱素"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《宽窄门》中的爱音\r\n原作者LOFTER：@Clumsivy\r\nB站视频化作者：@千早爱音-c和弦大师",
   "x": 729.7024086256374,
   "y": 932.1978392787006
 }

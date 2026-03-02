@@ -1,17 +1,18 @@
 {
   "id": 38,
   "name": "前方的光辉（特训后）",
-  "image": "",
+  "image": "/images/c2b1fa9b-7902-46fa-b81b-42c88d025c9d.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "五星卡面（特训后）",
   "x": -38.843675966309476,
   "y": 122.28299588298967
 }

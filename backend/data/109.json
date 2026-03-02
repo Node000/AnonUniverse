@@ -1,17 +1,25 @@
 {
   "id": 109,
   "name": "没劲爱音",
-  "image": "",
+  "image": "/images/b0efbaac-bf84-4f17-ae6e-105174e1835c.webp",
   "source": {
     "name": "千早爱音提不起劲",
-    "link": ""
+    "link": "https://renleijintianyezaijuezanshuaituizhong.lofter.com/post/202b4943_2baacca7c",
+    "type": "小说"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "千早爱音提不起劲",
+      "link": "https://www.bilibili.com/video/BV1NhnAzHEXD",
+      "type": "视频"
+    }
+  ],
   "tags": [
-    "二创"
+    "二创",
+    "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《千早爱音提不起劲》中的爱音形象\r\n原作者LOFTER：@人类今天也在绝赞衰退中\r\nB站视频化作者：@苗姐苗三水",
   "x": 265.73543339181833,
   "y": 1010.7959039476298
 }

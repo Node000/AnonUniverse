@@ -1,17 +1,18 @@
 {
   "id": 135,
   "name": "千早爱音钢板吧",
-  "image": "",
+  "image": "/images/981b6e08-91c9-4280-99f7-df0e84a119df.webp",
   "source": {
-    "name": "百度贴吧",
-    "link": ""
+    "name": "千早爱音钢板吧",
+    "link": "https://tieba.baidu.com/f?kw=%E5%8D%83%E6%97%A9%E7%88%B1%E9%9F%B3%E9%92%A2%E6%9D%BF",
+    "type": "其他"
   },
   "related": [],
   "tags": [
     "贴吧"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "调侃千早爱音“钢板”特质的贴吧",
   "x": -809.0,
   "y": -415.0
 }

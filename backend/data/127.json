@@ -1,18 +1,26 @@
 {
   "id": 127,
   "name": "智障爱音",
-  "image": "",
+  "image": "/images/6b6e95de-709e-4820-9cac-4d23463f35d7.webp",
   "source": {
-    "name": "假如千早爱音患有智力障碍",
-    "link": ""
+    "name": "[爱素]假如爱音患有智力缺陷 #1为什么是我？",
+    "link": "https://swarmgymbag.lofter.com/post/8327adab_2bd513c32",
+    "type": "小说"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "[MyGo 爱素]假如千早爱音患有智力缺陷",
+      "link": "https://www.bilibili.com/video/BV1euE1zUEWs",
+      "type": "视频"
+    }
+  ],
   "tags": [
     "二创",
-    "爱素"
+    "爱素",
+    "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《千早爱音患有智力缺陷》中的爱音，剧中的爱音如剧标题的描述一样。\r\n原作者LOFTER：@kanade_346\r\nB站视频化作者：@若叶家若睦",
   "x": 646.9515715714989,
   "y": 1080.5407752304748,
   "is_famous": true

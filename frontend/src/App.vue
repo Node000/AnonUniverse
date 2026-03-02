@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, ref, reactive, nextTick, computed } from 'vue'
+import { onMounted, onUnmounted, ref, reactive, nextTick, computed, watch } from 'vue'
 import { Network } from 'vis-network'
 import { DataSet } from 'vis-data'
 import axios from 'axios'
@@ -261,10 +261,10 @@ const renderNodes = (data) => {
       try { related = JSON.parse(related); } catch (e) { related = []; }
     }
 
-    const imageUrl = node.image ? (node.image.startsWith('http') ? node.image : `${apiBase}${node.image}`) : `${apiBase}/images/default.png`;
+    const imageUrl = node.image ? (node.image.startsWith('http') ? node.image : `${apiBase}${node.image}`) : `${apiBase}/images/default.webp`;
     
     // Calculate size based on connections
-    const nodeSize = 35 + Math.min(25, (connectionCounts[node.id] || 0) * 2.5);
+    const nodeSize = 34 + Math.min(36, (connectionCounts[node.id] || 0) * 4);
 
     return {
       ...node,
@@ -277,7 +277,7 @@ const renderNodes = (data) => {
       image: imageUrl,
       size: nodeSize,
       originalSize: nodeSize, // Store for hover/blur and other effects
-      brokenImage: `${apiBase}/images/default.png`,
+      brokenImage: `${apiBase}/images/default.webp`,
       color: {
         border: '#ff69b4',
         background: isDarkMode.value ? '#1a1a2e' : '#ffffff'
@@ -480,6 +480,7 @@ const startEdit = () => {
     tags: Array.isArray(selectedNode.value.tags) ? selectedNode.value.tags.join(',') : '',
     extension: selectedNode.value.extension || [],
     introduction: selectedNode.value.introduction || '',
+    imageFile: null,
     imagePreview: selectedNode.value.image
   })
 }
@@ -497,6 +498,7 @@ const startAdd = () => {
     related: [],
     tags: '',
     introduction: '',
+    imageFile: null,
     imagePreview: null
   })
 }
@@ -631,10 +633,10 @@ const confirmCrop = () => {
   ctx.drawImage(img, (cropperState.x * (size/300)) - drawW/2 + size/2, (cropperState.y * (size/300)) - drawH/2 + size/2, drawW, drawH)
   
   canvas.toBlob((blob) => {
-    editForm.imageFile = new File([blob], "avatar.png", { type: "image/png" })
+    editForm.imageFile = new File([blob], "avatar.webp", { type: "image/webp" })
     editForm.imagePreview = URL.createObjectURL(blob)
     showCropModal.value = false
-  }, 'image/png')
+  }, 'image/webp')
 }
 
 const cancelCrop = () => {
@@ -734,7 +736,7 @@ const submitForm = async () => {
       // Update local data without full refresh
       const finalImageUrl = resultNode.image 
         ? (resultNode.image.startsWith('http') ? resultNode.image : `${apiBase}${resultNode.image}`) 
-        : `${apiBase}/images/default.png`;
+        : `${apiBase}/images/default.webp`;
         
       nodesData.update({
         ...resultNode,
@@ -1102,6 +1104,13 @@ const initNetwork = () => {
     requestAnimationFrame(animateFamousNodes);
   };
   requestAnimationFrame(animateFamousNodes);
+
+  // Watch for toggle to force a redraw when we turn it off
+  watch(showFamous, () => {
+    if (network) {
+      network.redraw();
+    }
+  });
 
   // Optimize: Listen to zoom/drag to prevent redundant redraws
   network.on("zoom", () => {
@@ -1493,9 +1502,9 @@ onUnmounted(() => {
 
             <div class="image-container">
               <img 
-                :src="selectedNode.image ? (selectedNode.image.startsWith('http') ? selectedNode.image : `${apiBase}${selectedNode.image}`) : `${apiBase}/images/default.png`" 
+                :src="selectedNode.image ? (selectedNode.image.startsWith('http') ? selectedNode.image : `${apiBase}${selectedNode.image}`) : `${apiBase}/images/default.webp`" 
                 :alt="selectedNode.name"
-                :onerror="`this.src='${apiBase}/images/default.png'`"
+                :onerror="`this.src='${apiBase}/images/default.webp'`"
               >
             </div>
             

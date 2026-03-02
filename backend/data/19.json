@@ -1,17 +1,18 @@
 {
   "id": 19,
   "name": "点单，老样子（特训后）",
-  "image": "",
+  "image": "/images/de209cd4-a0d2-4f36-aa5b-1399106b4a48.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "三星卡面（特训后）",
   "x": 400.0,
   "y": 850.0
 }

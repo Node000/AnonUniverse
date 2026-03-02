@@ -1,17 +1,19 @@
 {
   "id": 72,
   "name": "没回日本爱音",
-  "image": "",
+  "image": "/images/bdffa37d-f484-46f8-b96c-061106cb184a.webp",
   "source": {
     "name": "如果爱音没有回到日本会发生什么...？",
-    "link": ""
+    "link": "https://www.bilibili.com/video/BV1UkM2zUErb",
+    "type": "其他"
   },
   "related": [],
   "tags": [
-    "二创"
+    "二创",
+    "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《如果爱音没有回到日本会发生什么...？》中的爱音形象。\r\n作者B站：@Emiya508",
   "x": 612.9329123784507,
   "y": -8.531400878380708,
   "is_famous": true

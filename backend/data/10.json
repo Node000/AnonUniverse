@@ -3,13 +3,14 @@
   "name": "手游卡面",
   "image": "",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/"
   },
   "related": [],
   "tags": [
     "形象类型",
-    "卡面"
+    "卡面",
+    "剧情向"
   ],
   "extension": [
     11,
@@ -28,7 +29,8 @@
     32,
     33,
     34,
-    35
+    35,
+    215
   ],
   "introduction": "",
   "x": 100.0,

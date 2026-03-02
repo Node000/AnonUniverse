@@ -1,17 +1,18 @@
 {
   "id": 27,
   "name": "一边迷茫着（特训后）",
-  "image": "",
+  "image": "/images/762bbdfa-0212-434d-be21-c92edc62cdc8.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
     "卡面"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "五星卡面（特训后）",
   "x": 258.30174480810706,
   "y": 104.30649567812323
 }

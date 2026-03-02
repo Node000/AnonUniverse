@@ -1,10 +1,11 @@
 {
   "id": 35,
   "name": "干劲十足的库洛！",
-  "image": "",
+  "image": "/images/11fb0667-19e9-4e56-a474-aa51442b1f44.webp",
   "source": {
-    "name": "BangDream手游",
-    "link": ""
+    "name": "BanG Dream! 少女乐团派对!",
+    "link": "https://game.bilibili.com/bangdream/",
+    "type": "游戏"
   },
   "related": [],
   "tags": [
@@ -13,7 +14,7 @@
   "extension": [
     36
   ],
-  "introduction": "",
+  "introduction": "五星卡面（特训前）",
   "x": -133.74587223337818,
   "y": 275.7800441199865
 }

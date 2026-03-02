@@ -1,10 +1,11 @@
 {
   "id": 199,
   "name": "静降想爱音",
-  "image": "",
+  "image": "/images/947e0c08-c197-4bf8-a08f-9ced81323ee3.webp",
   "source": {
     "name": "《静降想》MV",
-    "link": "https://www.bilibili.com/video/BV1gw2WBAE2q"
+    "link": "https://www.bilibili.com/video/BV1gw2WBAE2q",
+    "type": "视频"
   },
   "related": [],
   "tags": [

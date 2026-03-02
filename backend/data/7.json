@@ -1,15 +1,17 @@
 {
   "id": 7,
   "name": "描绘未来爱音",
-  "image": "/images/449f3984-1045-4357-98c6-a7aa3fea75b4.png",
+  "image": "/images/449f3984-1045-4357-98c6-a7aa3fea75b4.webp",
   "source": {
     "name": "《エガクミライ》MV",
-    "link": "https://www.bilibili.com/video/BV1pXpWzyEPD"
+    "link": "https://www.bilibili.com/video/BV1pXpWzyEPD",
+    "type": "视频"
   },
   "related": [
     {
       "name": "MV",
-      "link": ""
+      "link": "",
+      "type": "其他"
     }
   ],
   "tags": [

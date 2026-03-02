@@ -1,10 +1,11 @@
 {
   "id": 149,
   "name": "QB爱音",
-  "image": "",
+  "image": "/images/e20c22e6-c725-40fd-9948-7579af9c9060.webp",
   "source": {
     "name": "UltimateQB",
-    "link": ""
+    "link": "https://space.bilibili.com/313415599",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@UltimateQB 所绘制的爱音形象",
   "x": 465.54923825937374,
   "y": -784.2687088564792
 }

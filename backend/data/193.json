@@ -1,10 +1,11 @@
 {
   "id": 193,
   "name": "栞爱音",
-  "image": "",
+  "image": "/images/1689301f-9525-470e-a336-a895c010d2db.webp",
   "source": {
     "name": "《栞》MV",
-    "link": ""
+    "link": "https://www.bilibili.com/video/BV1na4y1c7bR",
+    "type": "视频"
   },
   "related": [],
   "tags": [

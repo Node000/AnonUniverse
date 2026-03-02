@@ -1,17 +1,19 @@
 {
   "id": 96,
   "name": "初中爱音",
-  "image": "",
+  "image": "/images/d3b26a0f-e67b-4db1-a1ce-fdfcd298e884.webp",
   "source": {
     "name": "BangDream It's MyGO!!!!!",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
+    "原作",
     "初中生"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "初中时期的爱音，进入过学生会，曾为“学生会乐队”的成员",
   "x": 141.1850336097512,
   "y": -50.663461040610194
 }
