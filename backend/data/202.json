@@ -1,10 +1,11 @@
 {
   "id": 202,
   "name": "B站表情包爱音",
-  "image": "",
+  "image": "/images/db98dd1a-c7bc-4dd9-b479-33252c4c7775.webp",
   "source": {
     "name": "B站数字周边",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "表情包"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站数字周边推出的mygo系列表情包\r\n作者为B站UP：@春也Haruya",
   "x": 137.18448098935087,
   "y": 60.66645016549451
 }

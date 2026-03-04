@@ -1,19 +1,26 @@
 {
   "id": 207,
   "name": "崩弦爱音",
-  "image": "",
+  "image": "/images/6af60a08-7b53-4389-915a-ecf25122848b.webp",
   "source": {
-    "name": "崩断的琴弦",
-    "link": ""
+    "name": "【ansy】崩断的琴弦.踽步并行（一）",
+    "link": "https://flamingo76357.lofter.com/post/31a2b7a9_2bc0467f9",
+    "type": "其他"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "[ansy/爱素]崩断的琴弦 #1-5",
+      "link": "https://www.bilibili.com/video/BV1R4M2zfETD",
+      "type": "视频"
+    }
+  ],
   "tags": [
     "二创",
     "爱素",
     "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《崩断的琴弦》中的爱音\r\n原作者LOFTER：@木木是炸猪排领域大神\r\nB站视频化作者：@NICOLRA",
   "x": 760.7331720246547,
   "y": 1241.4789291720747
 }

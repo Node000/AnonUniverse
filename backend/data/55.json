@@ -1,19 +1,26 @@
 {
   "id": 55,
   "name": "污秽不堪爱音",
-  "image": "",
+  "image": "/images/b18aea20-e1f5-4012-b562-53f88f51887e.webp",
   "source": {
-    "name": "污秽不堪的我",
-    "link": ""
+    "name": "（爱素）污秽不堪的我",
+    "link": "https://renleijintianyezaijuezanshuaituizhong.lofter.com/post/202b4943_2bba1f5f5",
+    "type": "小说"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "污秽不堪的我#1",
+      "link": "https://www.bilibili.com/video/BV1bN4y1J7g7",
+      "type": "视频"
+    }
+  ],
   "tags": [
     "二创",
     "爱素",
     "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《污秽不堪的我》中的爱音\r\n原作者LOFTER：@人类今天也在绝赞衰退中\r\nB站视频化作者：@缘素子",
   "x": -375.2962666805846,
   "y": 345.1270637896457
 }

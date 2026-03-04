@@ -1,10 +1,11 @@
 {
   "id": 140,
   "name": "长一君爱音",
-  "image": "",
+  "image": "/images/a70b9543-318d-4079-b63c-144fc95784f5.webp",
   "source": {
-    "name": "长一君",
-    "link": ""
+    "name": "呜呜长一君",
+    "link": "https://space.bilibili.com/35251686",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "绘制形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@呜呜长一君 所绘制的爱音形象",
   "x": 222.70749311446087,
   "y": -706.4098700243658
 }

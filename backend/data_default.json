@@ -1,0 +1,74 @@
+{
+  "nodes": [
+    {
+      "id": 1,
+      "name": "千早爱音",
+      "image": "/images/default.webp",
+      "source": {
+        "name": "BanG Dream! It's MyGO!!!!!",
+        "link": "https://bang-dream.com/mygo"
+      },
+      "related": [
+        {
+          "name": "MyGO!!!!!",
+          "link": ""
+        }
+      ],
+      "tags": [
+        "原作",
+        "主唱"
+      ],
+      "extension": [
+        2,
+        3
+      ],
+      "x": 0,
+      "y": 0,
+      "introduction": ""
+    },
+    {
+      "id": 2,
+      "name": "爱音（二创）",
+      "image": "/images/default.webp",
+      "source": {
+        "name": "粉丝创作",
+        "link": ""
+      },
+      "related": [
+        {
+          "name": "互联网",
+          "link": ""
+        }
+      ],
+      "tags": [
+        "二创"
+      ],
+      "extension": [],
+      "x": 0,
+      "y": -250,
+      "introduction": ""
+    },
+    {
+      "id": 3,
+      "name": "爱音（迷因）",
+      "image": "/images/default.webp",
+      "source": {
+        "name": "迷因",
+        "link": ""
+      },
+      "related": [
+        {
+          "name": "网络",
+          "link": ""
+        }
+      ],
+      "tags": [
+        "二创",
+        "迷因"
+      ],
+      "extension": [],
+      "x": -216,
+      "y": 125
+    }
+  ]
+}

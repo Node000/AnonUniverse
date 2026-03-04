@@ -7,15 +7,19 @@
     "link": "",
     "type": "其他"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "T~G~W 之歌",
+      "link": "https://www.bilibili.com/video/BV1kfFXeVEYh",
+      "type": "视频"
+    }
+  ],
   "tags": [
     "原作",
     "TGW",
     "表情截图"
   ],
-  "extension": [
-    172
-  ],
+  "extension": [],
   "introduction": "出自Ave Mujica第五集15分处，因魔性动作+音乐而被广传",
   "x": -22.83750108754137,
   "y": 387.28386629494776

@@ -1,10 +1,11 @@
 {
   "id": 51,
   "name": "公寓爱音",
-  "image": "",
+  "image": "/images/9d735c4f-b210-4788-a7c4-f8d5d253300c.webp",
   "source": {
-    "name": "It's Mygo公寓!!!!!",
-    "link": ""
+    "name": "【Mygo】It's Mygo公寓!!!!! #1:合租了，但室友为什么是你们！？",
+    "link": "https://www.bilibili.com/video/BV1rgZVYdEXs",
+    "type": "视频"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《It's Mygo公寓!!!!!》中的爱音\r\n作者B站：@General-Kata",
   "x": -89.13791079172782,
   "y": -283.5692754582498
 }

@@ -1,10 +1,11 @@
 {
   "id": 130,
   "name": "文爱音",
-  "image": "",
+  "image": "/images/d6679af3-b3fd-4817-ba5a-e20d86ed6e7a.webp",
   "source": {
-    "name": "逆风的少女终将为王",
-    "link": ""
+    "name": "逆风的少女终将为王#0-辞暮向晨",
+    "link": "https://www.bilibili.com/video/BV1dYXCY9ERF",
+    "type": "视频"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《逆风的少女终将为王》中的爱音\r\n超长篇（2026/03/04更新：目前215集）\r\n作者B站：@柳絮小小",
   "x": 475.39338941316913,
   "y": 1104.7588063875378
 }

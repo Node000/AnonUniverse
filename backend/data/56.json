@@ -1,10 +1,11 @@
 {
   "id": 56,
   "name": "东大爱音",
-  "image": "",
+  "image": "/images/74a57fb6-1140-487f-be36-6d2c9679895c.webp",
   "source": {
-    "name": "穿越之我在东大当高中生",
-    "link": ""
+    "name": "【爱音TV】穿越之我在东大当高中生#1",
+    "link": "https://www.bilibili.com/video/BV1FhMnzwEwY",
+    "type": "视频"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《穿越之我在东大当高中生》中的爱音形象\r\n作者B站：@初音没未莱",
   "x": 225.36946764345396,
   "y": 255.34792275407477
 }

@@ -63,20 +63,27 @@ const historyType = ref('global') // 'global' or 'node'
 // Famous Fanwork state
 const showFamous = ref(false)
 const pendingApplications = ref([])
+const mailboxMessages = ref([])
+const showMailboxModal = ref(false)
+const newMessageContent = ref('')
+const showNewMessageModal = ref(false)
 const showApplyFamousModal = ref(false)
 const showPendingApplicationsModal = ref(false)
 const showGuideModal = ref(false)
 
-const canApplyFamous = computed(() => {
+const canSendMessage = computed(() => {
   if (!currentUser.logged_in) return false
   if (currentUser.role === 'admin') return true
-  return currentUser.quota && currentUser.quota.applies < 1
+  return currentUser.quota && currentUser.quota.messages < 3
 })
 
 // Site info state
 const showSiteInfo = ref(false)
 
 const isHistoryLoading = ref(false)
+
+// Connection Edit Mode state
+const isConnectionEditMode = ref(false)
 
 const editForm = reactive({
   id: null,
@@ -407,6 +414,10 @@ const focusNode = (nodeId) => {
        if (prevNode) nodesData.update({ id: focusedNodeId.value, size: prevNode.originalSize, borderWidth: 3 })
     }
     focusedNodeId.value = nodeId
+    
+    // 如果之前开启了连线编辑，在切换节点时关闭或切换目标
+    isConnectionEditMode.value = false
+    
     // Highlight focused node by increasing size and border width
     nodesData.update({ id: nodeId, size: node.originalSize * 1.5, borderWidth: 6 })
     
@@ -721,10 +732,13 @@ const submitForm = async () => {
       // Refreshing is safer for new nodes to ensure links are correct.
       await fetchGraphData()
       
-      // 新增节点后自动激活物理引擎以布局新节点
+      // 新增节点后激活物理引擎一段时间以自动布局
       if (network) {
         network.setOptions({ physics: { enabled: true } });
         network.startSimulation();
+        setTimeout(() => {
+          if (network) network.setOptions({ physics: { enabled: false } });
+        }, 3000);
       }
     } else {
       const resp = await axios.put(`${apiBase}/api/nodes/${editForm.id}`, formData)
@@ -796,10 +810,13 @@ const deleteNode = async () => {
       await axios.delete(`${apiBase}/api/nodes/${selectedNode.value.id}?user_id=${currentUser.user_id}&nickname=${currentUser.nickname}`)
       await fetchGraphData()
       
-      // 删除节点后激活物理引擎以重新排列剩余节点
+      // 删除节点后激活物理引擎一段时间以重新排列
       if (network) {
         network.setOptions({ physics: { enabled: true } });
         network.startSimulation();
+        setTimeout(() => {
+          if (network) network.setOptions({ physics: { enabled: false } });
+        }, 3000);
       }
       
       await fetchUserInfo(currentUser.user_id, currentUser.nickname)
@@ -899,53 +916,80 @@ const fetchPendingApplications = async () => {
   }
 }
 
+const fetchMailbox = async () => {
+  if (!currentUser.logged_in) return
+  try {
+    const response = await axios.get(`${apiBase}/api/mailbox`, {
+      params: { user_id: currentUser.user_id }
+    })
+    mailboxMessages.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch mailbox:', error)
+  }
+}
+
+const openMailbox = async () => {
+  await fetchMailbox()
+  showMailboxModal.value = true
+}
+
+const submitMailboxMessage = async () => {
+  if (!newMessageContent.value.trim()) {
+    alert('请输入信件内容')
+    return
+  }
+  if (newMessageContent.value.length > 200) {
+    alert('内容不能超过200字')
+    return
+  }
+  
+  const formData = new FormData()
+  formData.append('content', newMessageContent.value)
+  formData.append('user_id', currentUser.user_id)
+  formData.append('nickname', currentUser.nickname)
+  
+  try {
+    await axios.post(`${apiBase}/api/mailbox`, formData)
+    newMessageContent.value = ''
+    showNewMessageModal.value = false
+    await fetchMailbox()
+    await fetchUserInfo(currentUser.user_id, currentUser.nickname)
+  } catch (error) {
+    alert(error.response?.data?.detail || '发送失败')
+  }
+}
+
+const handleProcessMessage = async (msgId) => {
+  const formData = new FormData()
+  formData.append('user_id', currentUser.user_id)
+  formData.append('nickname', currentUser.nickname)
+  
+  try {
+    await axios.post(`${apiBase}/api/mailbox/${msgId}/process`, formData)
+    await fetchMailbox()
+  } catch (error) {
+    console.error('Failed to process message:', error)
+  }
+}
+
+const unprocessedMailCount = computed(() => {
+  return mailboxMessages.value.filter(m => m.status === 'unprocessed').length
+})
+
+const shouldShowExpand = (msg) => {
+  // Simple heuristic: if content is long enough or has multiple newlines
+  if (!msg.content) return false;
+  const lines = msg.content.split('\n').length;
+  // If more than 2 lines, show expand
+  if (lines > 2) return true;
+  // If text is very long (approx more than 2 lines of container width)
+  if (msg.content.length > 60) return true;
+  return false;
+}
+
 const openPendingApplications = () => {
   fetchPendingApplications()
   showPendingApplicationsModal.value = true
-}
-
-const submitFamousApplication = async () => {
-  if (!selectedNode.value) return
-  
-  const formData = new FormData()
-  formData.append('node_id', selectedNode.value.id)
-  formData.append('user_id', currentUser.user_id)
-  formData.append('nickname', currentUser.nickname)
-  
-  try {
-    await axios.post(`${apiBase}/api/applications`, formData)
-    alert('申请已提交')
-    showApplyFamousModal.value = false
-    await fetchUserInfo(currentUser.user_id, currentUser.nickname)
-  } catch (error) {
-    alert(error.response?.data?.detail || '申请失败')
-  }
-}
-
-const processApplication = async (appId, action) => {
-  const app = pendingApplications.value.find(a => a.id === appId)
-  const nodeId = app ? app.node_id : null
-  
-  const formData = new FormData()
-  formData.append('action', action)
-  formData.append('user_id', currentUser.user_id)
-  formData.append('nickname', currentUser.nickname)
-  
-  try {
-    await axios.post(`${apiBase}/api/applications/${appId}/process`, formData)
-    await fetchPendingApplications()
-    if (action === 'approve' && nodeId) {
-      const updatedNode = nodesData.get(nodeId)
-      if (updatedNode) {
-        nodesData.update({ id: nodeId, is_famous: true })
-        if (selectedNode.value && selectedNode.value.id === nodeId) {
-          selectedNode.value.is_famous = true
-        }
-      }
-    }
-  } catch (error) {
-    alert(error.response?.data?.detail || '处理失败')
-  }
 }
 
 const toggleFamousStatus = async () => {
@@ -966,6 +1010,68 @@ const toggleFamousStatus = async () => {
   }
 }
 
+const toggleConnectionEditMode = () => {
+  isConnectionEditMode.value = !isConnectionEditMode.value
+}
+
+const handleNodeConnection = async (targetId) => {
+  if (!selectedNode.value || currentUser.role !== 'admin') return
+  
+  // 检查是添加还是删除
+  const currentExtensions = selectedNode.value.extension || []
+  const isRemoving = currentExtensions.includes(targetId)
+  
+  const formData = new FormData()
+  formData.append('target_id', targetId)
+  formData.append('action', isRemoving ? 'remove' : 'add')
+  formData.append('user_id', currentUser.user_id)
+  formData.append('nickname', currentUser.nickname)
+  
+  try {
+    const response = await axios.patch(`${apiBase}/api/nodes/${selectedNode.value.id}/extension`, formData)
+    const newExtension = response.data.extension
+    
+    // 更新本地数据
+    nodesData.update({ id: selectedNode.value.id, extension: newExtension })
+    selectedNode.value.extension = newExtension
+    
+    // 更新 Edge
+    const edgeId = `${selectedNode.value.id}-${targetId}`
+    const reverseEdgeId = `${targetId}-${selectedNode.value.id}`
+    const existingEdge = edgesData.get(edgeId) || edgesData.get(reverseEdgeId)
+    
+    if (isRemoving) {
+      if (existingEdge) {
+        edgesData.remove(existingEdge.id)
+      }
+    } else {
+      if (!existingEdge) {
+        edgesData.add({
+          id: edgeId,
+          from: selectedNode.value.id,
+          to: targetId,
+          color: { color: '#ff69b4', highlight: '#ff1493' },
+          width: 2,
+          opacity: 0.6
+        })
+      }
+    }
+    
+    // 连线变动后激活物理引擎一段时间以重新排布
+    if (network) {
+      network.setOptions({ physics: { enabled: true } });
+      network.startSimulation();
+      setTimeout(() => {
+        if (network) network.setOptions({ physics: { enabled: false } });
+      }, 3000);
+    }
+    
+  } catch (error) {
+    console.error(error)
+    alert(error.response?.data?.detail || '修改连线失败')
+  }
+}
+
 const toggleSiteInfo = (e) => {
   if (e) e.stopPropagation()
   showSiteInfo.value = !showSiteInfo.value
@@ -978,10 +1084,12 @@ const closePopups = () => {
 
 const closeGuide = () => {
   showGuideModal.value = false
-  // 设置 cookie，到期时间 30 天
-  const date = new Date()
-  date.setTime(date.getTime() + (30 * 24 * 60 * 60 * 1000))
-  document.cookie = `guide_seen=true; expires=${date.toUTCString()}; path=/`
+  // 仅在本地存储标记已读，不再设置过期时间
+  localStorage.setItem('guide_seen', 'true')
+}
+
+const openGuide = () => {
+  showGuideModal.value = true
 }
 
 const initNetwork = () => {
@@ -1112,6 +1220,12 @@ const initNetwork = () => {
     }
   });
 
+  watch(isPanelOpen, (newVal) => {
+    if (!newVal) {
+      isConnectionEditMode.value = false;
+    }
+  });
+
   // Optimize: Listen to zoom/drag to prevent redundant redraws
   network.on("zoom", () => {
     isZoomingOrPanning = true;
@@ -1212,6 +1326,14 @@ const initNetwork = () => {
       }
       
       const nodeId = params.nodes[0]
+      
+      if (isConnectionEditMode.value) {
+        if (nodeId !== selectedNode.value.id) {
+          handleNodeConnection(nodeId)
+        }
+        return
+      }
+
       if (focusedNodeId.value === nodeId) {
         // Deselect if clicking the same node
         const n = nodesData.get(nodeId)
@@ -1295,9 +1417,10 @@ onMounted(async () => {
   
   await fetchGraphData()
   initNetwork()
+  await fetchMailbox()
 
   // 漫游指南：检查是否首次进入
-  if (!document.cookie.includes('guide_seen=true')) {
+  if (!localStorage.getItem('guide_seen')) {
     setTimeout(() => {
       showGuideModal.value = true
     }, 1500)
@@ -1349,6 +1472,13 @@ onUnmounted(() => {
               <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
             </svg>
           </button>
+          <button class="guide-toggle" @click.stop="openGuide" title="查看漫游指南">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </button>
         </div>
         <div class="left-controls-row2" style="display: flex; gap: 10px;">
           <button 
@@ -1359,11 +1489,12 @@ onUnmounted(() => {
             知名二创显示
           </button>
           <button 
-            v-if="currentUser.role === 'admin'" 
-            class="famous-pending-btn" 
-            @click="openPendingApplications"
+            v-if="currentUser.logged_in"
+            class="mailbox-btn" 
+            :class="{ 'has-unread': currentUser.role === 'admin' && unprocessedMailCount > 0 }"
+            @click="openMailbox"
           >
-            待认证：{{ pendingApplications.length }}
+            {{ currentUser.role === 'admin' ? `信箱：${unprocessedMailCount}` : '信箱' }}
           </button>
         </div>
       </div>
@@ -1404,8 +1535,8 @@ onUnmounted(() => {
                     <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (1 - currentUser.quota.deletes) }}</span>
                   </div>
                   <div class="quota-item">
-                    <span>申请</span>
-                    <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (1 - (currentUser.quota.applies || 0)) }}</span>
+                    <span>信件</span>
+                    <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (3 - (currentUser.quota.messages || 0)) }}</span>
                   </div>
                 </div>
                 <button @click="logout" class="logout-btn">退出登录</button>
@@ -1475,19 +1606,6 @@ onUnmounted(() => {
           >
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-
-          <!-- Apply Famous Button -->
-          <button 
-            v-if="!isEditing && !isAdding && selectedNode && !selectedNode.is_famous" 
-            class="node-apply-famous-btn-round" 
-            :class="{ disabled: !canApplyFamous }"
-            title="申请知名二创"
-            @click.stop="canApplyFamous ? showApplyFamousModal = true : null"
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
           </button>
           
@@ -1578,7 +1696,13 @@ onUnmounted(() => {
                   @click="toggleFamousStatus"
                   title="切换知名二创状态"
                   style="background: #87CEEB;"
-                >{{ selectedNode.is_famous ? '取消知名二创' : '设为知名二创' }}</button>
+                >{{ selectedNode.is_famous ? '取消知名' : '设为知名' }}</button>
+                <button 
+                  class="btn connection-toggle" 
+                  @click="toggleConnectionEditMode"
+                  title="点击图中节点以增删连线"
+                  :style="{ background: isConnectionEditMode ? '#ff6b6b' : '#9c88ff' }"
+                >{{ isConnectionEditMode ? '停止连线' : '增删连线' }}</button>
               </div>
             </div>
           </template>
@@ -1708,11 +1832,13 @@ onUnmounted(() => {
         <div class="guide-modal" @click.stop style="background: #1a1a2e; border: 2px solid #ff69b4; border-radius: 15px; width: 450px; max-width: 90vw; padding: 30px; box-shadow: 0 0 30px rgba(255, 105, 180, 0.4);">
           <h2 style="color: #ff69b4; text-align: center; margin-bottom: 25px; font-size: 1.5rem;">千早爱音宇宙漫游指南</h2>
           <div style="color: #eee; line-height: 1.8; font-size: 0.95rem;">
-            <p>1. 本站用于记录千早爱音在中文互联网的各种形象。</p>
+            <p>1. 本站用于记录千早爱音在中文互联网的各种形象，侵权即删。</p>
             <p>2. 点击节点可以查看该形象的详细信息。</p>
-            <p>3. 用户在登录后，每日可以进行10次新增、10次修改、1次删除与1次申请知名二创</p>
-            <p>4. 申请“知名二创”的规则是：该形象作品为剧情性二创，且B站播放量 ≥ 20w。</p>
-            <p>5. 欢迎各位观众与作者对本网站的内容进行更新！</p>
+            <p>3. 用户在登录后，每日可以进行10次新增、10次修改、1次删除与3次信件投递</p>
+            <p>4. “知名二创”的标准是：该形象作品为剧情性二创，且B站播放量 ≥ 20w。</p>
+            <p>5. 如有大范围节点调整、连线增删、知名二创申请等需求，请通过信箱联系管理员。</p>
+            <p>6. 若想担任本站管理员，请联系本站站长。点击右下角“网站信息”可以访问显示站长的B站空间，私信即可。</p>
+            <p>7. 欢迎各位观众与作者对本网站的内容进行更新！</p>
           </div>
           <div style="display: flex; justify-content: center; margin-top: 30px;">
             <button class="btn confirm" style="padding: 10px 40px; font-size: 1rem;" @click="closeGuide">出发！</button>
@@ -1726,7 +1852,7 @@ onUnmounted(() => {
       <div v-if="showSiteInfo" class="site-info-panel" @click.stop>
         <div class="site-info-grid">
           <div class="info-section">
-            <h4>开发者</h4>
+            <h4>开发者&站长</h4>
             <a href="https://space.bilibili.com/365169149" target="_blank" class="info-link">空之堇</a>
           </div>
           <div class="info-section">
@@ -1741,19 +1867,85 @@ onUnmounted(() => {
       </div>
     </Transition>
 
-    <!-- Apply Famous Modal -->
-    <div v-if="showApplyFamousModal" class="modal-overlay" @click="showApplyFamousModal = false">
-      <div class="apply-famous-modal" @click.stop style="background: #1a1a2e; border: 1px solid #ff69b4; border-radius: 10px; width: 320px; display: flex; flex-direction: column;">
-        <div class="modal-header" style="display: flex; justify-content: center; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255, 105, 180, 0.3);">
-          <h3 style="margin: 0; color: #ff69b4;">申请知名二创</h3>
+    <!-- Mailbox Modal -->
+    <div v-if="showMailboxModal" class="modal-overlay" @click="showMailboxModal = false">
+      <div class="mailbox-modal" @click.stop :class="{ 'light-mode': !isDarkMode }">
+        <div class="modal-header" style="position: relative;">
+          <h3 style="width: 100%; text-align: center;">信箱</h3>
+          <button class="close-btn" @click="showMailboxModal = false" style="position: absolute; right: 15px; top: 15px; color: #ff69b4; background: none; border: none; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
         </div>
-        <div class="modal-body" style="padding: 20px; text-align: center; line-height: 1.6; color: #fff;">
-          <p>作品为剧情类二创</p>
-          <p>B站播放量≥20W</p>
+        <div class="mailbox-content">
+          <div class="mailbox-add-btn-wrapper">
+             <button 
+               class="mailbox-add-btn-large" 
+               @click="showNewMessageModal = true"
+               :disabled="!canSendMessage"
+               :title="!canSendMessage ? '今日信件配额已用完' : ''"
+               :style="{ opacity: canSendMessage ? 1 : 0.5, cursor: canSendMessage ? 'pointer' : 'not-allowed' }"
+             >
+                <span>{{ canSendMessage ? '+ 投递新信件' : '今日投递配额已用完' }}</span>
+             </button>
+          </div>
+          <div v-if="mailboxMessages.length === 0" class="no-messages">暂无信件</div>
+          <div v-for="msg in mailboxMessages" :key="msg.id" class="mailbox-item" :class="msg.status">
+            <div class="msg-main">
+              <div class="msg-header">
+                <span class="msg-user">{{ msg.nickname }}</span>
+                <span class="msg-time">{{ msg.time }}</span>
+              </div>
+              <div class="msg-body">
+                <div 
+                  class="msg-body-inner" 
+                  :class="{ 'expanded': msg.isExpanded }"
+                  :id="'msg-content-' + msg.id"
+                >
+                  {{ msg.content }}
+                </div>
+                <div 
+                  v-if="shouldShowExpand(msg)" 
+                  class="expand-toggle" 
+                  @click.stop="msg.isExpanded = !msg.isExpanded"
+                >
+                  {{ msg.isExpanded ? '收起' : '展开全文' }}
+                </div>
+              </div>
+            </div>
+            <div class="msg-status">
+              <template v-if="msg.status === 'unprocessed'">
+                <button v-if="currentUser.role === 'admin'" class="process-btn" @click="handleProcessMessage(msg.id)">处理</button>
+                <span v-else class="status-text unprocessed">未处理</span>
+              </template>
+              <template v-else>
+                <div class="status-info">
+                  <span>已处理</span>
+                  <span>处理人：{{ msg.processed_by }}</span>
+                  <span>时间：{{ msg.processed_time }}</span>
+                </div>
+              </template>
+            </div>
+          </div>
         </div>
-        <div class="modal-footer" style="display: flex; justify-content: center; gap: 40px; padding: 0 10px 20px 10px;">
-          <button class="btn confirm" @click="submitFamousApplication">确认</button>
-          <button class="btn cancel" @click="showApplyFamousModal = false">取消</button>
+      </div>
+    </div>
+
+    <!-- New Message Modal -->
+    <div v-if="showNewMessageModal" class="modal-overlay" @click="showNewMessageModal = false">
+      <div class="new-message-modal" @click.stop :class="{ 'light-mode': !isDarkMode }">
+        <div class="modal-header" style="position: relative;">
+          <h3 style="width: 100%; text-align: center;">投递信件</h3>
+          <button class="close-btn" @click="showNewMessageModal = false" style="position: absolute; right: 10px; top: 10px; background: none; border: none; color: inherit; font-size: 20px; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body">
+          <textarea 
+            v-model="newMessageContent" 
+            placeholder="请输入信件内容（最多200字）" 
+            maxlength="200"
+          ></textarea>
+          <div class="char-count">{{ newMessageContent.length }}/200</div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: space-between; padding: 15px 30px;">
+          <button class="btn confirm" @click="submitMailboxMessage">确认</button>
+          <button class="btn cancel" @click="showNewMessageModal = false">取消</button>
         </div>
       </div>
     </div>
@@ -2036,6 +2228,34 @@ onUnmounted(() => {
 
 .theme-toggle:hover {
   background: rgba(255, 105, 180, 0.3);
+}
+
+.guide-toggle {
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  border: 1px solid #ff69b4;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ff69b4;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.guide-toggle:hover {
+  background: rgba(255, 105, 180, 0.3);
+}
+
+.guide-toggle svg {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  display: block;
 }
 
 .user-status {
@@ -2725,6 +2945,33 @@ textarea::-webkit-scrollbar {
   color: #fff;
 }
 
+.mailbox-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  background: rgba(80, 227, 194, 0.2);
+  color: #50e3c2;
+  border: 1px solid #50e3c2;
+  transition: all 0.3s ease;
+}
+
+.mailbox-btn:hover {
+  background: rgba(80, 227, 194, 0.3);
+  box-shadow: 0 0 10px rgba(80, 227, 194, 0.5);
+}
+
+.mailbox-btn.has-unread {
+  background: rgba(243, 156, 18, 0.2);
+  color: #f39c12;
+  border: 1px solid #f39c12;
+}
+
+.mailbox-btn.has-unread:hover {
+  background: rgba(243, 156, 18, 0.3);
+  box-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+}
+
 .famous-pending-btn {
   padding: 8px 16px;
   border-radius: 20px;
@@ -2883,6 +3130,13 @@ textarea::-webkit-scrollbar {
 .btn.add { background: #50e3c2; }
 .btn.delete { background: #d0021b; }
 .btn.save-pos { background: #f39c12; }
+.btn.famous-toggle { 
+  background: #87CEEB !important; 
+  white-space: nowrap;
+}
+.btn.connection-toggle {
+  white-space: nowrap;
+}
 
 .btn:disabled {
   background: #555 !important;
@@ -3078,6 +3332,201 @@ textarea::-webkit-scrollbar {
 }
 .slide-up-enter-from, .slide-up-leave-to {
   transform: translateY(100%);
+}
+
+.mailbox-modal, .new-message-modal {
+  background: #1a1a2e;
+  border: 1px solid #ff69b4;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 600px;
+  height: 65vh; /* Reduced fixed height for mailbox */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #fff;
+}
+
+.new-message-modal {
+  max-width: 400px;
+  height: auto; /* New message modal adapts to content */
+  max-height: 80vh;
+}
+
+.mailbox-modal.light-mode, .new-message-modal.light-mode {
+  background: #fff;
+  color: #333;
+}
+
+.mailbox-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.mailbox-content::-webkit-scrollbar {
+  display: none;
+}
+
+.mailbox-item {
+  border-bottom: 1px solid rgba(255, 105, 180, 0.2);
+  padding: 4px 0; /* Further reduced vertical padding */
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Reduced gap inside items */
+}
+
+.mailbox-item:last-child {
+  border-bottom: none;
+}
+
+.msg-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 2px; /* Reduced margin */
+}
+
+.msg-user {
+  font-weight: bold;
+  color: #ff69b4;
+  font-size: 14px;
+}
+
+.msg-time {
+  font-size: 11px;
+  color: #888;
+}
+
+.msg-body {
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-width: 100%;
+}
+
+.msg-body-inner {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.msg-body-inner.expanded {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: initial;
+}
+
+.expand-toggle {
+  color: #ff69b4;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.expand-toggle:hover {
+  text-decoration: underline;
+}
+
+.msg-status {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.status-text.unprocessed {
+  color: #f39c12;
+  font-size: 12px;
+}
+
+.status-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 11px;
+  color: #888;
+  gap: 2px;
+}
+
+.status-info span:first-child {
+  color: #50e3c2;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.status-info span:nth-child(2) {
+  color: #87CEEB;
+}
+
+.process-btn {
+  background: #50e3c2;
+  color: #fff;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.mailbox-add-btn-wrapper {
+  padding: 10px 0 20px 0;
+  border-bottom: 1px dashed rgba(255, 105, 180, 0.5);
+  margin-bottom: 10px;
+}
+
+.mailbox-add-btn-large {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 105, 180, 0.1);
+  border: 2px dashed #ff69b4;
+  border-radius: 8px;
+  color: #ff69b4;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.mailbox-add-btn-large:hover {
+  background: rgba(255, 105, 180, 0.2);
+  box-shadow: 0 0 15px rgba(255, 105, 180, 0.3);
+}
+
+.new-message-modal .modal-body {
+  padding: 20px;
+}
+
+.new-message-modal textarea {
+  width: 100%;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #ff69b4;
+  border-radius: 5px;
+  color: inherit;
+  padding: 10px;
+  resize: none;
+  font-family: inherit;
+}
+
+.char-count {
+  text-align: right;
+  font-size: 12px;
+  color: #888;
+  margin-top: 5px;
+}
+
+.no-messages {
+  text-align: center;
+  padding: 40px;
+  color: #888;
 }
 
 /* Mobile Responsive Adjustments */

@@ -1,18 +1,25 @@
 {
   "id": 206,
   "name": "软糯可爱爱音",
-  "image": "",
+  "image": "/images/942bafd7-8a28-4bc0-b075-062a3f407704.webp",
   "source": {
-    "name": "假如千早爱音变得特别可爱且软糯",
-    "link": ""
+    "name": "（old）假如千早爱音变得特别可爱且软糯",
+    "link": "https://xinjinjumin849522616368.lofter.com/post/7f412aa8_2bc10c080",
+    "type": "小说"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "假如千早爱音变得特别可爱且软糯",
+      "link": "https://www.bilibili.com/video/BV1c73seZE2D",
+      "type": "视频"
+    }
+  ],
   "tags": [
     "二创",
     "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《假如千早爱音变得特别可爱且软糯》中的爱音\r\n原作者LOFTER：@璀璨要乐奈\r\nB站视频化作者：@璀璨要乐奈",
   "x": 895.0636135569546,
   "y": 1298.081039945102,
   "is_famous": true

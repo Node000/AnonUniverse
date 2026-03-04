@@ -7,13 +7,7 @@
     "link": "https://game.bilibili.com/bangdream",
     "type": "游戏"
   },
-  "related": [
-    {
-      "name": "BanG Dream! Our Notes",
-      "link": "",
-      "type": "游戏"
-    }
-  ],
+  "related": [],
   "tags": [
     "原作",
     "手游",
@@ -33,16 +27,13 @@
     47,
     48,
     49,
-    50,
     51,
     52,
     53,
     54,
     55,
     56,
-    57,
     58,
-    59,
     73,
     74,
     75,
@@ -84,9 +75,10 @@
     209,
     210,
     211,
-    213
+    213,
+    233
   ],
   "x": 1522.0,
   "y": 90.0,
-  "introduction": "BanG Dream!官方手游剧情中的爱音立绘形象"
+  "introduction": "BanG Dream!官方手游剧情中的爱音立绘形象\r\n此处延伸的多为已视频化的二创"
 }

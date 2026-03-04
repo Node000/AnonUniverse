@@ -1,19 +1,26 @@
 {
   "id": 110,
   "name": "白毛爱音",
-  "image": "",
+  "image": "/images/c397ac91-d3a4-43ca-976b-423c23e02634.webp",
   "source": {
-    "name": "假如爱音变成了白毛……",
-    "link": ""
+    "name": "all爱/假如爱音变成了白毛.....",
+    "link": "https://hll0887891.lofter.com/post/7812d803_2bef56cf2",
+    "type": "小说"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "【Mygo/all 爱】假如爱音变成了白毛....",
+      "link": "https://www.bilibili.com/video/BV1Fet2z9E2z",
+      "type": "视频"
+    }
+  ],
   "tags": [
     "二创",
     "爱all",
     "剧情向"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《假如爱音变成了白毛……》中的爱音形象\r\n原作者LOFTER：@水槽槽槽槽\r\nB站视频化作者：@龙虾NL",
   "x": 469.9695131973471,
   "y": 722.3765330712599
 }

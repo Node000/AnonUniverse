@@ -34,6 +34,7 @@ USERS_FILE = "users.json"
 ADMINS_FILE = "admins.json"
 HISTORY_FILE = "history.json"
 APPLICATIONS_FILE = "applications.json"
+MAILBOX_FILE = "mailbox.json"
 
 # Ensure data directory exists
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -92,6 +93,23 @@ def save_applications(apps):
     except IOError:
         pass
 
+def load_mailbox():
+    if not os.path.exists(MAILBOX_FILE):
+        return []
+    try:
+        with open(MAILBOX_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            return json.loads(content) if content else []
+    except (json.JSONDecodeError, IOError):
+        return []
+
+def save_mailbox(messages):
+    try:
+        with open(MAILBOX_FILE, "w", encoding="utf-8") as f:
+            json.dump(messages, f, ensure_ascii=False, indent=2)
+    except IOError:
+        pass
+
 def load_history():
     if not os.path.exists(HISTORY_FILE):
         return []
@@ -130,7 +148,7 @@ def get_user_quota(user_id: str):
     users = load_users()
     today = str(datetime.date.today())
     if user_id not in users:
-        users[user_id] = {"last_date": today, "adds": 0, "edits": 0, "deletes": 0, "applies": 0}
+        users[user_id] = {"last_date": today, "adds": 0, "edits": 0, "deletes": 0, "applies": 0, "messages": 0}
     
     user = users[user_id]
     if user.get("last_date") != today:
@@ -139,6 +157,7 @@ def get_user_quota(user_id: str):
         user["edits"] = 0
         user["deletes"] = 0
         user["applies"] = 0
+        user["messages"] = 0
     
     save_users(users)
     return user
@@ -166,6 +185,7 @@ def check_permission(user_id: str, action: str):
     if action == "edit" and user["edits"] >= 10: return False
     if action == "delete" and user["deletes"] >= 1: return False
     if action == "apply" and user["applies"] >= 1: return False
+    if action == "message" and user["messages"] >= 3: return False
     return True
 
 def record_action(user_id: str, action: str, node_id: int, node_name: str, nickname: str = "未知用户"):
@@ -193,6 +213,7 @@ def record_action(user_id: str, action: str, node_id: int, node_name: str, nickn
     elif action == "edit": users[user_id]["edits"] += 1
     elif action == "delete": users[user_id]["deletes"] += 1
     elif action == "apply_famous": users[user_id]["applies"] += 1
+    elif action == "send_message": users[user_id]["messages"] += 1
     save_users(users)
 
 # Ensure images directory exists
@@ -420,6 +441,41 @@ def update_node(
     record_action(user_id, "edit", node["id"], node["name"], nickname)
     return node
 
+@app.patch("/api/nodes/{node_id}/extension")
+def update_node_extension(
+    node_id: int,
+    target_id: int = Form(...),
+    action: str = Form("add"), # "add" or "remove"
+    user_id: str = Form("guest"),
+    nickname: str = Form("未知用户")
+):
+    if user_id == "guest":
+        raise HTTPException(403, "请登录后重试")
+    admins = load_admins()
+    if user_id not in admins:
+        raise HTTPException(403, "仅管理员可修改连线")
+        
+    node_file = os.path.join(DATA_DIR, f"{node_id}.json")
+    if not os.path.exists(node_file):
+        raise HTTPException(404, "Node not found")
+        
+    with open(node_file, "r", encoding="utf-8") as f:
+        node = json.load(f)
+    
+    if "extension" not in node:
+        node["extension"] = []
+    
+    if action == "add":
+        if target_id not in node["extension"]:
+            node["extension"].append(target_id)
+    elif action == "remove":
+        if target_id in node["extension"]:
+            node["extension"].remove(target_id)
+    
+    save_node(node)
+    record_action(user_id, "edit", node["id"], node["name"], nickname)
+    return node
+
 @app.patch("/api/nodes/{node_id}/position")
 def update_node_position(
     node_id: int,
@@ -640,6 +696,87 @@ def toggle_famous(
     save_node(node)
     record_action(user_id, "edit", node_id, node["name"], nickname)
     return node
+
+# --- Mailbox Routes ---
+
+@app.get("/api/mailbox")
+def get_mailbox(user_id: str = "guest"):
+    if user_id == "guest":
+        raise HTTPException(403, "请登录后查看信箱")
+    
+    messages = load_mailbox()
+    # Sort: unprocessed first, then by time descending
+    # status 'unprocessed' should come before 'processed'
+    sorted_messages = sorted(
+        messages, 
+        key=lambda x: (0 if x.get("status") == "unprocessed" else 1, x.get("time", "")),
+        reverse=False # We want unprocessed at top, then oldest for unprocessed? 
+                      # The user said "保证未处理信件显示在所有已处理信件上方" and "按时间排序"
+                      # Usually "按时间排序" within groups means newest first or oldest first. 
+                      # Let's assume newest first within groups.
+    )
+    
+    # Re-sorting logic for "unprocessed at top, then all sorted by time" usually implies:
+    # return [unprocessed, sorted by time] + [processed, sorted by time]
+    unprocessed = [m for m in sorted_messages if m.get("status") == "unprocessed"]
+    processed = [m for m in sorted_messages if m.get("status") == "processed"]
+    
+    unprocessed.sort(key=lambda x: x.get("time", ""), reverse=True)
+    processed.sort(key=lambda x: x.get("time", ""), reverse=True)
+    
+    return unprocessed + processed
+
+@app.post("/api/mailbox")
+def send_message(
+    content: str = Form(...),
+    user_id: str = Form("guest"),
+    nickname: str = Form("未知用户")
+):
+    if user_id == "guest":
+        raise HTTPException(403, "请登录后发送信箱")
+    
+    if not check_permission(user_id, "message"):
+        raise HTTPException(403, "今日信件投递次数已用完")
+        
+    if len(content) > 200:
+        raise HTTPException(400, "信件内容不能超过200字")
+        
+    messages = load_mailbox()
+    new_msg = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "nickname": nickname,
+        "content": content,
+        "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "status": "unprocessed"
+    }
+    messages.append(new_msg)
+    save_mailbox(messages)
+    
+    record_action(user_id, "send_message", 0, "Mailbox", nickname)
+    return new_msg
+
+@app.post("/api/mailbox/{msg_id}/process")
+def process_message(
+    msg_id: str,
+    user_id: str = Form("guest"),
+    nickname: str = Form("未知用户")
+):
+    admins = load_admins()
+    if user_id not in admins:
+        raise HTTPException(403, "Unauthorized")
+        
+    messages = load_mailbox()
+    msg = next((m for m in messages if m["id"] == msg_id), None)
+    if not msg:
+        raise HTTPException(404, "Message not found")
+        
+    msg["status"] = "processed"
+    msg["processed_by"] = nickname
+    msg["processed_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    save_mailbox(messages)
+    return {"message": "Processed"}
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,10 +1,11 @@
 {
   "id": 200,
   "name": "端程山爱音",
-  "image": "",
+  "image": "/images/884d9145-81b5-4571-8248-0c34f252389c.webp",
   "source": {
     "name": "《端程山》MV",
-    "link": "https://www.bilibili.com/video/BV1Cw4m1k7nW"
+    "link": "https://www.bilibili.com/video/BV1Cw4m1k7nW",
+    "type": "其他"
   },
   "related": [],
   "tags": [

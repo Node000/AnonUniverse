@@ -1,17 +1,18 @@
 {
   "id": 71,
   "name": "重庆森林爱音",
-  "image": "",
+  "image": "/images/da6fc7e8-092b-4e2b-9481-627ae62561f3.webp",
   "source": {
-    "name": "重庆森林",
-    "link": ""
+    "name": "【2025/剧场版】重庆森林",
+    "link": "https://www.bilibili.com/video/BV1fyedzbEyh",
+    "type": "视频"
   },
   "related": [],
   "tags": [
     "二创"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《重庆森林》中的爱音形象\r\n作者B站：@foolish_dogve",
   "x": -577.2821570318106,
   "y": -31.504865613673857
 }
