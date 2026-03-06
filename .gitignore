@@ -5,7 +5,8 @@ backend/config.json
 backend/admins.json
 backend/users.json
 backend/images/
-backend/data
+backend/data/
+backend/backups/
 frontend/node_modules/
 frontend/dist/
 .env

@@ -21,17 +21,11 @@ def rollback():
     print(f"当前存在的备份: {', '.join(backups)}")
     
     try:
-        days_ago = input("要回滚到几天前？ (0 表示取消): ")
-        if not days_ago.isdigit():
-            print("输入无效，请输入数字。")
-            return
-            
-        days_ago = int(days_ago)
-        if days_ago == 0:
+        target_date = input("请输入要回滚的备份日期 (格式: YYYY-MM-DD，输入 0 表示取消): ")
+        if target_date == "0":
             print("回滚取消。")
             return
             
-        target_date = (datetime.date.today() - datetime.timedelta(days=days_ago)).strftime("%Y-%m-%d")
         target_path = os.path.join(BACKUP_DIR, target_date)
         
         if not os.path.exists(target_path):
