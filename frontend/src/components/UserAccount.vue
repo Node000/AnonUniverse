@@ -14,7 +14,7 @@ const emit = defineEmits(['toggleDropdown', 'loginWithBangumi', 'logout'])
     <div class="header-controls">
       <div 
         class="user-status" 
-        :class="[currentUser.logged_in ? 'login-active' : 'login-guest', isDropdownOpen ? 'dropdown-active' : '']" 
+        :class="[currentUser.logged_in ? 'login-active' : 'login-guest', isDropdownOpen ? 'dropdown-active' : '', currentUser.role]" 
         @click.stop="$emit('toggleDropdown')"
       >
         {{ currentUser.logged_in ? `已登录：${currentUser.nickname}` : '未登录' }}
@@ -29,24 +29,24 @@ const emit = defineEmits(['toggleDropdown', 'loginWithBangumi', 'logout'])
             </template>
             <template v-else>
               <div class="user-role-badge" :class="currentUser.role">
-                {{ currentUser.role === 'admin' ? '管理员' : '普通用户' }}
+                {{ currentUser.role === 'admin' ? '管理员' : (currentUser.role === 'banned' ? '已封禁' : '普通用户') }}
               </div>
               <div class="quota-info">
                 <div class="quota-item">
                   <span>新增</span>
-                  <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (10 - currentUser.quota.adds) }}</span>
+                  <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (currentUser.role === 'banned' ? '✕' : (10 - currentUser.quota.adds)) }}</span>
                 </div>
                 <div class="quota-item">
                   <span>修改</span>
-                  <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (10 - currentUser.quota.edits) }}</span>
+                  <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (currentUser.role === 'banned' ? '✕' : (10 - currentUser.quota.edits)) }}</span>
                 </div>
                 <div class="quota-item">
                   <span>删除</span>
-                  <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (1 - currentUser.quota.deletes) }}</span>
+                  <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (currentUser.role === 'banned' ? '✕' : (1 - currentUser.quota.deletes)) }}</span>
                 </div>
                 <div class="quota-item">
                   <span>信件</span>
-                  <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (3 - (currentUser.quota.messages || 0)) }}</span>
+                  <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (currentUser.role === 'banned' ? '✕' : (3 - (currentUser.quota.messages || 0))) }}</span>
                 </div>
               </div>
               <button @click="$emit('logout')" class="logout-btn">退出登录</button>

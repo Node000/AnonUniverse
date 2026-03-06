@@ -1,18 +1,25 @@
 {
   "id": 201,
   "name": "粉蔷爱音",
-  "image": "",
+  "image": "/images/7d9eb5a5-aeee-4479-bec1-6741fc2d5bac.webp",
   "source": {
     "name": "B站数字周边",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "【花酒】【绘画过程】粉蔷-千早爱音装扮图",
+      "link": "https://www.bilibili.com/video/BV141421t7tk",
+      "type": "视频"
+    }
+  ],
   "tags": [
     "官方",
     "周边"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站推出的数字周边中“粉蔷”卡面的爱音形象",
   "x": 142.55020363792457,
   "y": -46.68446682555386
 }

@@ -8,7 +8,8 @@ export function useUser(apiBase) {
     nickname: '游客',
     logged_in: false,
     role: 'visitor',
-    quota: null
+    quota: null,
+    notifications: []
   })
 
   const fetchUserInfo = async (userId = 'guest', nickname = '游客') => {

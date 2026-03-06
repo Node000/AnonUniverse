@@ -30,16 +30,61 @@ BGM_REDIRECT_URI = os.getenv("BGM_REDIRECT_URI", "http://localhost:8000/api/auth
 
 DATA_DIR = "data"
 IMAGES_DIR = "images"
-USERS_FILE = "users.json"
+USERS_DIR = "users"
 ADMINS_FILE = "admins.json"
+BANNED_FILE = "banned.json"
 HISTORY_FILE = "history.json"
 APPLICATIONS_FILE = "applications.json"
 MAILBOX_FILE = "mailbox.json"
 MAILBOX_HISTORY_FILE = "mailhistory.json"
 HISTORY_ARCHIVE_FILE = "historyarchive.json"
+BACKUP_DIR = "backups"
 
 # Ensure data directory exists
 os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(USERS_DIR, exist_ok=True)
+os.makedirs(BACKUP_DIR, exist_ok=True)
+
+def perform_data_backup():
+    """
+    备份 data 文件夹并保留最近 3 天的数据。
+    增加了额外的日期锁文件检查，确保全站每天仅触发一次备份。
+    """
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
+    lock_file = os.path.join(BACKUP_DIR, f".backup_done_{today_str}")
+    backup_path = os.path.join(BACKUP_DIR, today_str)
+    
+    # 只要锁文件存在，说明今天已经备份过了
+    if os.path.exists(lock_file):
+        return
+
+    # 执行备份
+    if not os.path.exists(backup_path):
+        try:
+            shutil.copytree(DATA_DIR, backup_path)
+            # 写入锁文件，防止其他用户再次触发
+            with open(lock_file, "w") as f:
+                f.write(datetime.datetime.now().strftime("%H:%M:%S"))
+            print(f"Daily full backup completed to {backup_path}")
+        except Exception as e:
+            print(f"Backup failed: {e}")
+            return # 失败时不执行清理
+            
+    # 清理 3 天前的备份和对应的锁文件
+    try:
+        all_items = os.listdir(BACKUP_DIR)
+        dirs = sorted([d for d in all_items if os.path.isdir(os.path.join(BACKUP_DIR, d))])
+        
+        if len(dirs) > 3:
+            for old_backup in dirs[:-3]:
+                shutil.rmtree(os.path.join(BACKUP_DIR, old_backup))
+                # 同时尝试清理旧的锁文件
+                old_lock = os.path.join(BACKUP_DIR, f".backup_done_{old_backup}")
+                if os.path.exists(old_lock):
+                    os.remove(old_lock)
+                print(f"Deleted expired backup and lock: {old_backup}")
+    except Exception as e:
+        print(f"Cleanup failed: {e}")
 
 def load_data():
     nodes = []
@@ -242,29 +287,40 @@ def archive_old_history():
         save_history(to_keep)
 
 def load_users():
-    if not os.path.exists(USERS_FILE):
-        return {}
-    try:
-        with open(USERS_FILE, "r", encoding="utf-8") as f:
-            content = f.read().strip()
-            return json.loads(content) if content else {}
-    except (json.JSONDecodeError, IOError):
-        return {}
+    """Deprecated: using individual files. Returns a fake dict for compatibility."""
+    users = {}
+    if os.path.exists(USERS_DIR):
+        for filename in os.listdir(USERS_DIR):
+            if filename.endswith(".json"):
+                try:
+                    uid = filename[:-5]
+                    with open(os.path.join(USERS_DIR, filename), "r", encoding="utf-8") as f:
+                        users[uid] = json.load(f)
+                except: continue
+    return users
 
-def save_users(users):
+def load_user(user_id: str):
+    user_file = os.path.join(USERS_DIR, f"{user_id}.json")
+    if not os.path.exists(user_file):
+        return None
     try:
-        with open(USERS_FILE, "w", encoding="utf-8") as f:
-            json.dump(users, f, ensure_ascii=False, indent=2)
-    except IOError:
-        pass
+        with open(user_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except: return None
+
+def save_user(user_id: str, user_data: dict):
+    user_file = os.path.join(USERS_DIR, f"{user_id}.json")
+    try:
+        with open(user_file, "w", encoding="utf-8") as f:
+            json.dump(user_data, f, ensure_ascii=False, indent=2)
+    except: pass
 
 def get_user_quota(user_id: str):
-    users = load_users()
+    user = load_user(user_id)
     today = str(datetime.date.today())
-    if user_id not in users:
-        users[user_id] = {"last_date": today, "adds": 0, "edits": 0, "deletes": 0, "applies": 0, "messages": 0}
+    if not user:
+        user = {"last_date": today, "adds": 0, "edits": 0, "deletes": 0, "applies": 0, "messages": 0, "notifications": []}
     
-    user = users[user_id]
     if user.get("last_date") != today:
         user["last_date"] = today
         user["adds"] = 0
@@ -272,10 +328,13 @@ def get_user_quota(user_id: str):
         user["deletes"] = 0
         user["applies"] = 0
         user["messages"] = 0
-        # 每天第一次登录时清理过期的 'new' 状态
+        # 每天第一次登录时触发备份、归档和状态清理
+        perform_data_backup()
+        archive_old_history()
+        archive_old_mail()
         clean_old_new_status()
     
-    save_users(users)
+    save_user(user_id, user)
     return user
 
 def load_admins():
@@ -289,9 +348,26 @@ def load_admins():
     except (json.JSONDecodeError, IOError):
         return ["1173408"]
 
+def load_banned():
+    if not os.path.exists(BANNED_FILE):
+        return []
+    try:
+        with open(BANNED_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            banned = json.loads(content) if content else []
+            return banned if isinstance(banned, list) else []
+    except (json.JSONDecodeError, IOError):
+        return []
+
 def check_permission(user_id: str, action: str):
     if user_id == "guest":
         return False
+    
+    # 封禁检查
+    banned = load_banned()
+    if user_id in banned:
+        return False
+        
     admins = load_admins()
     if user_id in admins:
         return True
@@ -324,13 +400,16 @@ def record_action(user_id: str, action: str, node_id: int, node_name: str, nickn
 
     # Record quota
     if user_id in admins: return
-    users = load_users()
-    if action == "add": users[user_id]["adds"] += 1
-    elif action == "edit": users[user_id]["edits"] += 1
-    elif action == "delete": users[user_id]["deletes"] += 1
-    elif action == "apply_famous": users[user_id]["applies"] += 1
-    elif action == "send_message": users[user_id]["messages"] += 1
-    save_users(users)
+    user = load_user(user_id)
+    if not user:
+        user = {"last_date": str(datetime.date.today()), "adds": 0, "edits": 0, "deletes": 0, "applies": 0, "messages": 0, "notifications": []}
+    
+    if action == "add": user["adds"] += 1
+    elif action == "edit": user["edits"] += 1
+    elif action == "delete": user["deletes"] += 1
+    elif action == "apply_famous": user["applies"] += 1
+    elif action == "send_message": user["messages"] += 1
+    save_user(user_id, user)
 
 # Ensure images directory exists
 os.makedirs(IMAGES_DIR, exist_ok=True)
@@ -419,7 +498,19 @@ def get_user_info(user_id: str = "guest", nickname: str = "游客"):
     if user_id == "guest":
         return {"logged_in": False, "role": "visitor"}
     
+    banned = load_banned()
+    if user_id in banned:
+        return {
+            "logged_in": True,  # 允许显示登录态
+            "user_id": user_id,
+            "nickname": nickname,  # 恢复原名，不需要提示
+            "role": "banned",      # 角色设为 banned
+            "quota": {"adds": 0, "edits": 0, "deletes": 0, "applies": 0, "messages": 0}, # 配额全设为 0
+            "notifications": []
+        }
+        
     admins = load_admins()
+    user_data = load_user(user_id)
     quota = get_user_quota(user_id)
     role = "admin" if user_id in admins else "user"
     return {
@@ -427,7 +518,8 @@ def get_user_info(user_id: str = "guest", nickname: str = "游客"):
         "user_id": user_id,
         "nickname": nickname,
         "role": role,
-        "quota": quota
+        "quota": quota,
+        "notifications": user_data.get("notifications", [])
     }
 
 @app.post("/api/nodes")
@@ -903,8 +995,29 @@ def process_message(
     msg["processed_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     msg["feedback"] = feedback if feedback.strip() else "无"
     
+    # 获取信件投递人并更新其通知列表
+    sender_id = msg.get("user_id")
+    if sender_id and sender_id != "guest":
+        user = load_user(sender_id)
+        if user:
+            # 记录需要通知用户的信件ID列表 (id_list)
+            if "notifications" not in user:
+                user["notifications"] = []
+            if msg_id not in user["notifications"]:
+                user["notifications"].append(msg_id)
+            save_user(sender_id, user)
+    
     save_mailbox(messages)
     return {"message": "Success"}
+
+@app.post("/api/user/clear_notifications")
+def clear_notifications(user_id: str = Form(...)):
+    user = load_user(user_id)
+    if user:
+        user["notifications"] = []
+        save_user(user_id, user)
+        return {"status": "success"}
+    return {"status": "not_found"}
 
 if __name__ == "__main__":
     import uvicorn

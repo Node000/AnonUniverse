@@ -1,10 +1,11 @@
 {
   "id": 162,
   "name": "哈呵爱音",
-  "image": "",
+  "image": "/images/8be99b9f-9dbd-4c94-aaa1-5da87a5b961a.webp",
   "source": {
     "name": "很ying的哈呵",
-    "link": ""
+    "link": "https://space.bilibili.com/423802579",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "3D形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@很ying的哈呵 所制作的爱音形象",
   "x": 363.0732391865431,
   "y": -1516.7480748094704
 }

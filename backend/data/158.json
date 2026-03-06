@@ -1,10 +1,11 @@
 {
   "id": 158,
   "name": "伊蕾娜爱音",
-  "image": "",
+  "image": "/images/a473d23e-6b35-4a20-ac1d-0662eecebcb2.webp",
   "source": {
-    "name": "伊蕾娜世界第一可爱",
-    "link": ""
+    "name": "伊蕾娜世界第一可爱-",
+    "link": "https://space.bilibili.com/365324799",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "3D形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@伊蕾娜世界第一可爱- 所制作的爱音模型（暂议）",
   "x": 200.66279574155632,
   "y": -1103.9246224061078
 }

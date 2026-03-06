@@ -1,18 +1,25 @@
 {
   "id": 101,
   "name": "联机做梦爱音",
-  "image": "",
+  "image": "/images/3549fa97-c0f3-4274-87d4-8d311e360225.webp",
   "source": {
-    "name": "丰川祥子梦到自己跟千早爱音接吻？",
-    "link": ""
+    "name": "【爱祥】丰川祥子和千早爱音在教室里接吻，我怎么会做这样的梦？",
+    "link": "https://www.bilibili.com/video/BV1wS411N7wU",
+    "type": "小说"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "【MyGO/爱祥】丰川祥子梦到自己跟千早爱音接吻?（#1）",
+      "link": "https://www.bilibili.com/video/BV1wS411N7wU",
+      "type": "视频"
+    }
+  ],
   "tags": [
     "二创",
     "爱祥"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《丰川祥子梦到自己跟千早爱音接吻?》中的爱音\r\n原作者LOFTER：@奈良良柴犬\r\nB站视频化作者：@呃吩咐的沟通呢",
   "x": 2051.0,
   "y": 751.0,
   "is_famous": true

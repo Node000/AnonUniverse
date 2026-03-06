@@ -1,17 +1,18 @@
 {
   "id": 191,
   "name": "刺狗联动爱音",
-  "image": "",
+  "image": "/images/1b161cc1-12c9-4144-b258-2b4dd6e5da6d.webp",
   "source": {
     "name": "GBC与MyGO联动",
-    "link": ""
+    "link": "",
+    "type": "其他"
   },
   "related": [],
   "tags": [
     "联动"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "Girls Band Cry和It's MyGO!!!!!联动期间的爱音立绘形象",
   "x": 75.75425926650406,
   "y": 129.46540929137515
 }

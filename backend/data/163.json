@@ -1,10 +1,11 @@
 {
   "id": 163,
   "name": "查理爱音",
-  "image": "",
+  "image": "/images/601f826d-fae3-4087-8fa2-85519541294b.webp",
   "source": {
     "name": "查理先生哟",
-    "link": ""
+    "link": "https://space.bilibili.com/1727115",
+    "type": "其他"
   },
   "related": [],
   "tags": [
@@ -12,7 +13,7 @@
     "3D形象"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "B站作者：@查理先生哟 所制作的爱音形象",
   "x": 246.840990557514,
   "y": -1399.2172129557996
 }

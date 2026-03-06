@@ -54,6 +54,30 @@ const feedbackContent = ref('')
 const showApplyFamousModal = ref(false)
 const showPendingApplicationsModal = ref(false)
 const showGuideModal = ref(false)
+const showNotificationModal = ref(false)
+const notifiedMails = ref([])
+
+const triggerNotificationCheck = async () => {
+  if (currentUser.logged_in && currentUser.notifications && currentUser.notifications.length > 0) {
+    try {
+      const resp = await axios.get(`${apiBase}/api/mailbox`, {
+        params: { user_id: currentUser.user_id }
+      })
+      const allMails = resp.data
+      notifiedMails.value = allMails.filter(m => currentUser.notifications.includes(m.id))
+      
+      if (notifiedMails.value.length > 0) {
+        showNotificationModal.value = true
+        // 告知后端清空通知列表
+        const formData = new FormData()
+        formData.append('user_id', currentUser.user_id)
+        await axios.post(`${apiBase}/api/user/clear_notifications`, formData)
+      }
+    } catch (e) {
+      console.error("Failed to check notifications", e)
+    }
+  }
+}
 
 const canSendMessage = computed(() => {
   if (!currentUser.logged_in) return false
@@ -89,7 +113,7 @@ let edgesData = new DataSet([])
 const focusedNodeId = ref(null)
 
 const canDeleteSelectedNode = computed(() => {
-  if (!selectedNode.value || !currentUser.logged_in) return false
+  if (!selectedNode.value || !currentUser.logged_in || currentUser.role === 'banned') return false
   
   // 1. Root node protection (id: 1)
   // Logic: if it is node 1 and there is more than 1 node total, it's the root and can't be deleted.
@@ -110,6 +134,7 @@ const canDeleteSelectedNode = computed(() => {
 const deleteDisabledReason = computed(() => {
   if (!selectedNode.value) return ''
   if (!currentUser.logged_in) return '请登录后操作'
+  if (currentUser.role === 'banned') return '账号已被封禁'
   
   const isRoot = selectedNode.value.id === 1 || selectedNode.value.id === '1'
   if (isRoot && nodesData.get().length > 1) return '根节点受保护，在有其他爱音存在时不可删除'
@@ -121,19 +146,20 @@ const deleteDisabledReason = computed(() => {
 })
 
 const canEditSelectedNode = computed(() => {
-  if (!selectedNode.value || !currentUser.logged_in) return false
+  if (!selectedNode.value || !currentUser.logged_in || currentUser.role === 'banned') return false
   if (currentUser.role === 'admin') return true
   return currentUser.quota && currentUser.quota.edits < 10
 })
 
 const canAddNode = computed(() => {
-  if (!currentUser.logged_in) return false
+  if (!currentUser.logged_in || currentUser.role === 'banned') return false
   if (currentUser.role === 'admin') return true
   return currentUser.quota && currentUser.quota.adds < 10
 })
 
 const editButtonsDisabledReason = computed(() => {
   if (!currentUser.logged_in) return '请登录后操作'
+  if (currentUser.role === 'banned') return '账号已被封禁'
   if (currentUser.role !== 'admin') {
     if (isAdding.value && currentUser.quota.adds >= 10) return '今日新增配额已用完'
     if (!isAdding.value && currentUser.quota.edits >= 10) return '今日修改配额已用完'
@@ -371,7 +397,7 @@ const focusNode = (nodeId) => {
       // 注意：offset 是视口坐标。将视图中心相对于视口中心向右移动 200px，会让节点看起来位于除去侧边栏后的中心。
       network.focus(nodeId, {
         scale: 1, 
-        offset: { x: window.innerWidth > 768 ? 200 : 0, y: 0 }, 
+        offset: { x: 0, y: 0 }, 
         animation: { 
           duration: 530, 
           easingFunction: 'easeInOutCubic' 
@@ -1118,6 +1144,9 @@ const initNetwork = () => {
     network.once("stabilizationIterationsDone", () => {
       loading.value = false
       network.setOptions({ physics: { enabled: false } })
+      
+      // 检查是否有新的信件反馈通知 (等加载结束后)
+      triggerNotificationCheck()
     })
     
     // 拖拽时标记状态并开启物理引擎，通过 simulation 确保即使微小移动也激活
@@ -1745,6 +1774,39 @@ onUnmounted(() => {
       </div>
     </Transition>
 
+    <!-- Mailbox Feedback Notification Modal -->
+    <Transition name="fade">
+      <div v-if="showNotificationModal" class="modal-overlay" @click="showNotificationModal = false">
+        <div class="modal-content notification-modal" @click.stop style="background: #1a1a2e; border: 2px solid #ff69b4; border-radius: 15px; width: 450px; max-width: 90vw; padding: 25px; box-shadow: 0 0 30px rgba(255, 105, 180, 0.4);">
+          <h2 style="color: #ff69b4; text-align: center; margin-bottom: 20px;">有新的信件反馈！</h2>
+          <div class="notification-list" style="max-height: 450px; overflow-y: auto; padding-right: 5px; scrollbar-width: none; -ms-overflow-style: none;">
+            <style>
+              .notification-list::-webkit-scrollbar { display: none; }
+            </style>
+            <div v-for="mail in notifiedMails" :key="mail.id" class="notified-mail-item" style="border-bottom: 1px dashed rgba(255,105,180,0.3); padding: 15px 0;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #888; font-size: 0.8rem;">{{ mail.time }}</span>
+                <span :style="{ color: mail.status === 'processed' ? '#50e3c2' : '#ff4d4f', fontSize: '0.9rem', fontWeight: 'bold' }">
+                  {{ mail.status === 'processed' ? '已处理' : '已拒绝' }}
+                </span>
+              </div>
+              <div style="color: #eee; margin-bottom: 10px; font-size: 0.95rem; line-height: 1.4; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 5px; white-space: pre-wrap; word-break: break-all;">
+                {{ mail.content }}
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="color: #ff69b4; font-size: 0.9rem; white-space: pre-wrap;">反馈：{{ mail.feedback }}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                  <span style="color: #666; font-size: 0.75rem;">处理时间：{{ mail.processed_time || mail.time }}</span>
+                  <span style="color: #00ffff; font-size: 0.8rem;">处理人：{{ mail.processed_by }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button @click="showNotificationModal = false" class="pink-btn" style="width: 100%; margin-top: 20px; padding: 10px; border-radius: 20px; font-weight: bold;">我知道了</button>
+        </div>
+      </div>
+    </Transition>
+
     <!-- Mailbox Modal -->
     <div v-if="showMailboxModal" class="modal-overlay" @click="showMailboxModal = false">
       <div class="mailbox-modal" @click.stop :class="{ 'light-mode': !isDarkMode }">
@@ -2335,6 +2397,16 @@ onUnmounted(() => {
   box-shadow: 0 0 15px rgba(80, 227, 194, 0.3);
 }
 
+.login-active.admin:not(.dropdown-active):hover {
+  background: rgba(0, 191, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 191, 255, 0.3);
+}
+
+.login-active.banned:not(.dropdown-active):hover {
+  background: rgba(255, 69, 0, 0.3);
+  box-shadow: 0 0 15px rgba(255, 69, 0, 0.3);
+}
+
 .login-guest {
   background: rgba(255, 255, 255, 0.15);
   color: #ccc;
@@ -2349,6 +2421,18 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   min-width: 120px;
+}
+
+.login-active.admin {
+  background: rgba(0, 191, 255, 0.2);
+  color: #00bfff;
+  border: 1px solid #00bfff;
+}
+
+.login-active.banned {
+  background: rgba(255, 69, 0, 0.2);
+  color: #ff4500;
+  border: 1px solid #ff4500;
 }
 
 .quota-info {
