@@ -4,6 +4,8 @@ backend/history.json
 backend/config.json
 backend/admins.json
 backend/users.json
+backend/images/
+backend/data
 frontend/node_modules/
 frontend/dist/
 .env

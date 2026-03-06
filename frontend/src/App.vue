@@ -4,50 +4,29 @@ import { Network } from 'vis-network'
 import { DataSet } from 'vis-data'
 import axios from 'axios'
 
+// Components
+import Toolbar from './components/Toolbar.vue'
+import UserAccount from './components/UserAccount.vue'
+import SearchBox from './components/SearchBox.vue'
+import HistoryModal from './components/HistoryModal.vue'
+
+// Composables
+import { useUser } from './composables/useUser'
+import { useMouseEffects } from './composables/useMouseEffects'
+
 const apiBase = import.meta.env.DEV ? 'http://localhost:8000' : ''
 const vizContainer = ref(null)
 const fileInput = ref(null)
+
+// Use Composables
+const { currentUser, fetchUserInfo } = useUser(apiBase)
+const { ripples, handleMouseMove, handleClickRipple } = useMouseEffects()
+
 const loading = ref(true)
 const selectedNode = ref(null)
 const isPanelOpen = ref(false)
 const isDropdownOpen = ref(false)
 let isDraggingNode = false // Track dragging state for physics optimization
-const currentUser = reactive({
-  user_id: 'guest',
-  nickname: '游客',
-  logged_in: false,
-  role: 'visitor',
-  quota: null
-})
-
-const fetchUserInfo = async (userId = 'guest', nickname = '游客') => {
-  try {
-    const url = `${apiBase}/api/user/info?user_id=${userId}&nickname=${encodeURIComponent(nickname)}`
-    console.log('Fetching user info from:', url)
-    const response = await axios.get(url)
-    Object.assign(currentUser, response.data)
-    if (currentUser.role === 'admin') {
-      fetchPendingApplications()
-    }
-  } catch (error) {
-    console.error('Failed to fetch user info:', error)
-    // If fetch fails but we have stored credentials (not guest),
-    // we should still mark user as logged in even if quota/role info is missing
-    if (userId !== 'guest') {
-       currentUser.user_id = userId
-       currentUser.nickname = nickname
-       currentUser.logged_in = true
-       // Default fallback for failed network calls
-       if (!currentUser.role) currentUser.role = 'visitor'
-       if (!currentUser.quota) currentUser.quota = { adds: 0, edits: 0, deletes: 0 }
-    }
-    
-    if (error.response) {
-      console.error('Data:', error.response.data)
-      console.error('Status:', error.response.status)
-    }
-  }
-}
 
 const isEditing = ref(false)
 const isAdding = ref(false)
@@ -62,11 +41,16 @@ const historyType = ref('global') // 'global' or 'node'
 
 // Famous Fanwork state
 const showFamous = ref(false)
+const showNewNodes = ref(false)
 const pendingApplications = ref([])
 const mailboxMessages = ref([])
 const showMailboxModal = ref(false)
 const newMessageContent = ref('')
 const showNewMessageModal = ref(false)
+const showFeedbackModal = ref(false)
+const processingMessageId = ref(null)
+const processingAction = ref('')
+const feedbackContent = ref('')
 const showApplyFamousModal = ref(false)
 const showPendingApplicationsModal = ref(false)
 const showGuideModal = ref(false)
@@ -171,47 +155,6 @@ const fetchGraphData = async () => {
 }
 
 const isDarkMode = ref(localStorage.getItem('theme') !== 'light')
-
-// Mouse effect states
-const mousePos = reactive({ x: 0, y: 0 })
-const rippleActive = ref(false)
-const ripples = ref([])
-let lastRippleTime = 0 // Track last ripple creation
-
-const handleMouseMove = (e) => {
-  mousePos.x = e.clientX
-  mousePos.y = e.clientY
-  
-  // Continuous small ripples on movement - Throttled
-  const now = Date.now()
-  if (now - lastRippleTime > 40) { // Only create ripple every 80ms
-    const id = now + Math.random()
-    ripples.value.push({
-      id,
-      x: e.clientX,
-      y: e.clientY,
-      type: 'small'
-    })
-    lastRippleTime = now
-    setTimeout(() => {
-      ripples.value = ripples.value.filter(r => r.id !== id)
-    }, 600)
-  }
-}
-
-const handleClickRipple = (e) => {
-  const id = Date.now()
-  ripples.value.push({
-    id,
-    x: e.clientX,
-    y: e.clientY,
-    type: 'large'
-  })
-  // Remove ripple after animation
-  setTimeout(() => {
-    ripples.value = ripples.value.filter(r => r.id !== id)
-  }, 1000)
-}
 
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value
@@ -424,9 +367,15 @@ const focusNode = (nodeId) => {
     selectedNode.value = node
     isPanelOpen.value = true
     if (network) {
+      // 优化：侧边栏宽度为 400px，因此中心点应向左偏移 200px 来抵消侧边栏占用的空间。
+      // 注意：offset 是视口坐标。将视图中心相对于视口中心向右移动 200px，会让节点看起来位于除去侧边栏后的中心。
       network.focus(nodeId, {
-        scale: 1,
-        animation: { duration: 600, easingFunction: 'easeInOutQuad' }
+        scale: 1, 
+        offset: { x: window.innerWidth > 768 ? 200 : 0, y: 0 }, 
+        animation: { 
+          duration: 530, 
+          easingFunction: 'easeInOutCubic' 
+        }
       })
     }
   }
@@ -443,10 +392,12 @@ const resetView = () => {
     if (node1) {
       network.focus(1, {
         scale: 1,
-        animation: { duration: 600, easingFunction: 'easeInOutQuad' }
+        animation: { duration: 530, easingFunction: 'easeInOutCubic' }
       })
     } else {
-      network.fit({ animation: true })
+      network.fit({ 
+        animation: { duration: 660, easingFunction: 'easeInOutCubic' } 
+      })
     }
     isPanelOpen.value = false
     activeFilters.value = []
@@ -873,12 +824,8 @@ const logout = () => {
 }
 
 const toggleDropdown = (e) => {
-  e.stopPropagation()
-  if (isDropdownOpen.value) {
-    isDropdownOpen.value = false
-  } else {
-    isDropdownOpen.value = true
-  }
+  if (e) e.stopPropagation()
+  isDropdownOpen.value = !isDropdownOpen.value
 }
 
 const toggleHistory = async (nodeId = null) => {
@@ -959,16 +906,32 @@ const submitMailboxMessage = async () => {
   }
 }
 
-const handleProcessMessage = async (msgId) => {
+const handleProcessMessage = (msgId, action) => {
+  processingMessageId.value = msgId
+  processingAction.value = action
+  feedbackContent.value = ''
+  showFeedbackModal.value = true
+}
+
+const submitFeedback = async () => {
+  if (feedbackContent.value.length > 30) {
+    alert('反馈不能超过30字')
+    return
+  }
+  
   const formData = new FormData()
+  formData.append('action', processingAction.value)
+  formData.append('feedback', feedbackContent.value)
   formData.append('user_id', currentUser.user_id)
   formData.append('nickname', currentUser.nickname)
   
   try {
-    await axios.post(`${apiBase}/api/mailbox/${msgId}/process`, formData)
+    await axios.post(`${apiBase}/api/mailbox/${processingMessageId.value}/process`, formData)
+    showFeedbackModal.value = false
     await fetchMailbox()
   } catch (error) {
     console.error('Failed to process message:', error)
+    alert('提交失败')
   }
 }
 
@@ -1184,6 +1147,7 @@ const initNetwork = () => {
   }
 
   let famousRotationAngle = 0;
+  let newNodesRotationAngle = 0;
   let lastFrameTime = 0;
   const FPS_LIMIT = 30;
   const FRAME_INTERVAL = 1000 / FPS_LIMIT;
@@ -1196,9 +1160,11 @@ const initNetwork = () => {
     const elapsed = timestamp - lastFrameTime;
 
     if (elapsed > FRAME_INTERVAL) {
-      if (showFamous.value && network) {
+      if ((showFamous.value || showNewNodes.value) && network) {
+        const timeScale = elapsed / FRAME_INTERVAL;
         // Increment angle based on time to be smooth regardless of frame rate
-        famousRotationAngle += 0.03 * (elapsed / FRAME_INTERVAL);
+        famousRotationAngle += 0.03 * timeScale;
+        newNodesRotationAngle += 0.036 * timeScale; // 1.2x speed (0.03 * 1.2 = 0.036)
         
         // Only trigger redraw if NOT zooming/panning to avoid fighting for resources
         if (!isZoomingOrPanning) {
@@ -1214,7 +1180,7 @@ const initNetwork = () => {
   requestAnimationFrame(animateFamousNodes);
 
   // Watch for toggle to force a redraw when we turn it off
-  watch(showFamous, () => {
+  watch([showFamous, showNewNodes], () => {
     if (network) {
       network.redraw();
     }
@@ -1244,26 +1210,45 @@ const initNetwork = () => {
   });
 
   network.on("afterDrawing", (ctx) => {
-    if (!showFamous.value) return;
+    if (!showFamous.value && !showNewNodes.value) return;
     const nodes = nodesData.get();
     nodes.forEach(node => {
-      if (node.is_famous) {
-        const pos = network.getPositions([node.id])[node.id];
-        if (pos) {
-          ctx.save();
-          ctx.translate(pos.x, pos.y);
-          ctx.rotate(famousRotationAngle);
-          ctx.beginPath();
-          const radius = (node.size || 40) + 15;
-          const circumference = 2 * Math.PI * radius;
-          const dashLen = circumference / 12; // 6 segments, each with 1 solid and 1 gap
-          ctx.arc(0, 0, radius, 0, 2 * Math.PI);
-          ctx.strokeStyle = '#87CEEB';
-          ctx.lineWidth = 6;
-          ctx.setLineDash([dashLen, dashLen]);
-          ctx.stroke();
-          ctx.restore();
-        }
+      const pos = network.getPositions([node.id])[node.id];
+      if (!pos) return;
+
+      // Draw Famous Circle (Skyblue, Original Speed)
+      if (showFamous.value && node.is_famous) {
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(famousRotationAngle);
+        ctx.beginPath();
+        const radius = (node.size || 40) + 15;
+        const circumference = 2 * Math.PI * radius;
+        const dashLen = circumference / 12; // 6 segments, each with 1 solid and 1 gap
+        ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#87CEEB';
+        ctx.lineWidth = 6;
+        ctx.setLineDash([dashLen, dashLen]);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Draw New Node Circle (Orange, 1.2x Speed)
+      if (showNewNodes.value && node.new) {
+        ctx.save();
+        ctx.translate(pos.x, pos.y);
+        ctx.rotate(newNodesRotationAngle);
+        ctx.beginPath();
+        // Slightly different radius if both circles are on (nested)
+        const radius = (node.size || 40) + (node.is_famous && showFamous.value ? 25 : 15);
+        const circumference = 2 * Math.PI * radius;
+        const dashLen = circumference / 12;
+        ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#FFA500'; // Orange
+        ctx.lineWidth = 6;
+        ctx.setLineDash([dashLen, dashLen]);
+        ctx.stroke();
+        ctx.restore();
       }
     });
   });
@@ -1456,129 +1441,50 @@ onUnmounted(() => {
     </div>
 
     <!-- UI Buttons -->
-    <div class="ui-layer top-left">
-      <div class="left-controls-container" style="display: flex; flex-direction: column; gap: 10px;">
-        <div class="left-controls">
-          <button class="home-btn pink-btn" @click="resetView">回到中心</button>
-          <button class="history-btn pink-btn" @click.stop="toggleHistory()">全站历史</button>
-          <button class="theme-toggle" @click="toggleDarkMode" :class="{ 'dark-mode-btn': isDarkMode }">
-            <!-- Sun (Light Mode) Icon -->
-            <svg v-if="!isDarkMode" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="5" />
-              <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M17.66 6.34l1.42-1.42" />
-            </svg>
-            <!-- Moon (Dark Mode) Icon -->
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-            </svg>
-          </button>
-          <button class="guide-toggle" @click.stop="openGuide" title="查看漫游指南">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-          </button>
-        </div>
-        <div class="left-controls-row2" style="display: flex; gap: 10px;">
-          <button 
-            class="famous-toggle-btn" 
-            :class="{ active: showFamous }" 
-            @click="showFamous = !showFamous"
-          >
-            知名二创显示
-          </button>
-          <button 
-            v-if="currentUser.logged_in"
-            class="mailbox-btn" 
-            :class="{ 'has-unread': currentUser.role === 'admin' && unprocessedMailCount > 0 }"
-            @click="openMailbox"
-          >
-            {{ currentUser.role === 'admin' ? `信箱：${unprocessedMailCount}` : '信箱' }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <Toolbar 
+      v-model:showFamous="showFamous"
+      v-model:showNewNodes="showNewNodes"
+      :isDarkMode="isDarkMode"
+      :currentUser="currentUser"
+      :unprocessedMailCount="unprocessedMailCount"
+      @resetView="resetView"
+      @toggleHistory="toggleHistory()"
+      @toggleDarkMode="toggleDarkMode"
+      @openGuide="openGuide"
+      @openMailbox="openMailbox"
+    />
 
-    <div class="ui-layer top-right">
-      <div class="header-controls">
-        <div 
-          class="user-status" 
-          :class="[currentUser.logged_in ? 'login-active' : 'login-guest', isDropdownOpen ? 'dropdown-active' : '']" 
-          @click="toggleDropdown"
-        >
-          {{ currentUser.logged_in ? `已登录：${currentUser.nickname}` : '未登录' }}
-          <Transition name="fade">
-            <div class="user-dropdown" v-if="isDropdownOpen" @click.stop>
-              <template v-if="!currentUser.logged_in">
-                <button 
-                  class="login-action-btn" 
-                  @click="loginWithBangumi"
-                  title="使用 Bangumi 账号授权登录以获得更多权限"
-                >使用 Bangumi 账号登录</button>
-              </template>
-              <template v-else>
-                <div class="user-role-badge" :class="currentUser.role">
-                  {{ currentUser.role === 'admin' ? '管理员' : '普通用户' }}
-                </div>
-                <div class="quota-info">
-                  <div class="quota-item">
-                    <span>新增</span>
-                    <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (10 - currentUser.quota.adds) }}</span>
-                  </div>
-                  <div class="quota-item">
-                    <span>修改</span>
-                    <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (10 - currentUser.quota.edits) }}</span>
-                  </div>
-                  <div class="quota-item">
-                    <span>删除</span>
-                    <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (1 - currentUser.quota.deletes) }}</span>
-                  </div>
-                  <div class="quota-item">
-                    <span>信件</span>
-                    <span class="quota-num">{{ currentUser.role === 'admin' ? '∞' : (3 - (currentUser.quota.messages || 0)) }}</span>
-                  </div>
-                </div>
-                <button @click="logout" class="logout-btn">退出登录</button>
-              </template>
-            </div>
-          </Transition>
-        </div>
-      </div>
-    </div>
+    <UserAccount 
+      :currentUser="currentUser"
+      :isDropdownOpen="isDropdownOpen"
+      @toggleDropdown="toggleDropdown"
+      @loginWithBangumi="loginWithBangumi"
+      @logout="logout"
+    />
 
     <div class="ui-layer bottom-left" :class="{ 'panel-up': showSiteInfo }">
-      <div class="search-container">
-        <div class="active-filters">
-          <span v-for="tag in activeFilters" :key="tag" class="filter-tag">
-            {{ tag }}
-            <i @click="removeFilter(tag)">×</i>
-          </span>
-        </div>
-        <input 
-          v-model="searchQuery" 
-          placeholder="搜索形象或标签..." 
-          @input="handleSearch"
-        >
-        <div v-if="searchResults.length > 0" class="search-results">
-          <div 
-            v-for="res in searchResults" 
-            :key="res.id" 
-            class="search-item"
-            @click="selectSearchResult(res)"
-          >
-            <span class="res-type">{{ res.type === 'node' ? '形象' : '标签' }}</span>
-            <span class="res-name">{{ res.name }}</span>
-          </div>
-        </div>
-      </div>
+      <SearchBox 
+        v-model:searchQuery="searchQuery"
+        :searchResults="searchResults"
+        :activeFilters="activeFilters"
+        @handleSearch="handleSearch"
+        @selectSearchResult="selectSearchResult"
+        @removeFilter="removeFilter"
+      />
     </div>
 
     <div class="ui-layer bottom-right" :class="{ 'panel-up': showSiteInfo }">
       <button class="info-btn pink-btn" @click.stop="toggleSiteInfo">网站信息</button>
     </div>
 
-    <!-- Graph Container -->
+    <!-- Modals -->
+    <HistoryModal 
+      :showHistory="showHistory"
+      :historyData="historyData"
+      :historyType="historyType"
+      :isHistoryLoading="isHistoryLoading"
+      @close="showHistory = false"
+    />
     <div 
       ref="vizContainer" 
       class="graph-container" 
@@ -1787,44 +1693,16 @@ onUnmounted(() => {
       </div>
     </Transition>
 
-    <!-- History Modal -->
-    <Transition name="fade">
-      <div v-if="showHistory" class="modal-overlay" @click="showHistory = false">
-        <div class="history-modal" @click.stop>
-          <div class="modal-header">
-            <h3>{{ historyType === 'global' ? '全站历史记录' : `${selectedNode?.name} 的修改记录` }}</h3>
-          </div>
-          <div class="history-list">
-            <div v-if="isHistoryLoading" class="history-loading-container">
-              <div class="mini-loader"></div>
-              <span>加载中...</span>
-            </div>
-            <template v-else>
-              <div v-if="historyData.length === 0" class="no-history">暂无记录</div>
-              <div v-for="(item, idx) in historyData" :key="idx" class="history-item">
-                <span class="history-time">[{{ item.time }}]</span>
-                <span class="history-user" :class="item.role">[{{ item.nickname }}]</span>
-                <span v-if="item.action === 'apply_famous'"> 申请 </span>
-                <span v-else-if="item.action === 'approve_famous'"> 同意了 </span>
-                <span v-else-if="item.action === 'reject_famous'"> 拒绝了 </span>
-                <span v-else> 进行了 </span>
-                <span class="history-action" :class="item.action">
-                  {{ item.action === 'add' ? '新增' : item.action === 'edit' ? '修改' : item.action === 'delete' ? '删除' : '' }}
-                </span>
-                <span v-if="historyType === 'global' || item.action.includes('famous')">
-                  <span v-if="!item.action.includes('famous')"> 形象 </span>
-                  <span class="history-node-link" @click="focusNode(item.node_id); showHistory = false">
-                    {{ item.node_name }}
-                  </span>
-                  <span v-if="item.action === 'apply_famous'"> 为<span style="color: #87CEEB;">知名二创</span> </span>
-                  <span v-if="item.action === 'approve_famous' || item.action === 'reject_famous'"> 的<span style="color: #87CEEB;">知名二创</span>申请 </span>
-                </span>
-              </div>
-            </template>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <!-- Modals -->
+    <HistoryModal 
+      v-if="showHistory"
+      :showHistory="showHistory"
+      :historyData="historyData"
+      :historyType="historyType"
+      :isHistoryLoading="isHistoryLoading"
+      @close="showHistory = false"
+      @focusNode="(id) => { focusNode(id); showHistory = false }"
+    />
 
     <!-- Guide Modal -->
     <Transition name="fade">
@@ -1837,7 +1715,7 @@ onUnmounted(() => {
             <p>3. 用户在登录后，每日可以进行10次新增、10次修改、1次删除与3次信件投递</p>
             <p>4. “知名二创”的标准是：该形象作品为剧情性二创，且B站播放量 ≥ 20w。</p>
             <p>5. 如有大范围节点调整、连线增删、知名二创申请等需求，请通过信箱联系管理员。</p>
-            <p>6. 若想担任本站管理员，请联系本站站长。点击右下角“网站信息”可以访问显示站长的B站空间，私信即可。</p>
+            <p>6. 若想担任本站管理员，请联系本站站长。点击右下角“网站信息”可以显示站长的B站空间链接，私信即可。</p>
             <p>7. 欢迎各位观众与作者对本网站的内容进行更新！</p>
           </div>
           <div style="display: flex; justify-content: center; margin-top: 30px;">
@@ -1912,12 +1790,18 @@ onUnmounted(() => {
             </div>
             <div class="msg-status">
               <template v-if="msg.status === 'unprocessed'">
-                <button v-if="currentUser.role === 'admin'" class="process-btn" @click="handleProcessMessage(msg.id)">处理</button>
+                <div v-if="currentUser.role === 'admin'" style="display: flex; gap: 5px;">
+                  <button class="process-btn" @click="handleProcessMessage(msg.id, 'process')">处理</button>
+                  <button class="reject-btn" @click="handleProcessMessage(msg.id, 'reject')" style="background: #ff4d4f; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">拒绝</button>
+                </div>
                 <span v-else class="status-text unprocessed">未处理</span>
               </template>
               <template v-else>
                 <div class="status-info">
-                  <span>已处理</span>
+                  <span>{{ msg.status === 'processed' ? '已处理' : '拒绝' }}</span>
+                  <span class="feedback-info" style="color: #ff69b4;">
+                    反馈：{{ msg.feedback || '无' }}
+                  </span>
                   <span>处理人：{{ msg.processed_by }}</span>
                   <span>时间：{{ msg.processed_time }}</span>
                 </div>
@@ -1943,9 +1827,31 @@ onUnmounted(() => {
           ></textarea>
           <div class="char-count">{{ newMessageContent.length }}/200</div>
         </div>
-        <div class="modal-footer" style="display: flex; justify-content: space-between; padding: 15px 30px;">
+        <div class="modal-footer" style="display: flex; justify-content: center; gap: 30px; padding: 15px 30px;">
           <button class="btn confirm" @click="submitMailboxMessage">确认</button>
           <button class="btn cancel" @click="showNewMessageModal = false">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div v-if="showFeedbackModal" class="modal-overlay" @click="showFeedbackModal = false">
+      <div class="new-message-modal" @click.stop :class="{ 'light-mode': !isDarkMode }">
+        <div class="modal-header" style="position: relative;">
+          <h3 style="width: 100%; text-align: center;">信件反馈 ({{ processingAction === 'process' ? '处理' : '拒绝' }})</h3>
+          <button class="close-btn" @click="showFeedbackModal = false" style="position: absolute; right: 10px; top: 10px; background: none; border: none; color: inherit; font-size: 20px; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body">
+          <textarea 
+            v-model="feedbackContent" 
+            placeholder="请输入反馈内容（最多30字，可选）" 
+            maxlength="30"
+          ></textarea>
+          <div class="char-count">{{ feedbackContent.length }}/30</div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: center; gap: 30px; padding: 15px 30px;">
+          <button class="btn confirm" @click="submitFeedback">确认</button>
+          <button class="btn cancel" @click="showFeedbackModal = false">取消</button>
         </div>
       </div>
     </div>
@@ -2945,6 +2851,27 @@ textarea::-webkit-scrollbar {
   color: #fff;
 }
 
+.newnode-toggle-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  background: rgba(255, 165, 0, 0.1);
+  color: #FFA500;
+  border: 1px solid #FFA500;
+  transition: all 0.3s ease;
+}
+
+.newnode-toggle-btn:hover {
+  background: rgba(255, 165, 0, 0.2);
+  box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+}
+
+.newnode-toggle-btn.active {
+  background: rgba(255, 165, 0, 0.8);
+  color: #fff;
+}
+
 .mailbox-btn {
   padding: 8px 16px;
   border-radius: 20px;
@@ -3227,6 +3154,11 @@ textarea::-webkit-scrollbar {
   padding: 10px 20px;
   overflow-y: auto;
   flex: 1;
+  scrollbar-width: none; /* Firefox */
+}
+
+.history-list::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
 }
 
 .history-item {
@@ -3460,7 +3392,12 @@ textarea::-webkit-scrollbar {
   font-size: 11px;
 }
 
-.status-info span:nth-child(2) {
+.status-info .feedback-info {
+   font-size: 11px;
+   font-weight: bold;
+}
+
+.status-info span:nth-child(3) {
   color: #87CEEB;
 }
 

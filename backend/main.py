@@ -35,6 +35,8 @@ ADMINS_FILE = "admins.json"
 HISTORY_FILE = "history.json"
 APPLICATIONS_FILE = "applications.json"
 MAILBOX_FILE = "mailbox.json"
+MAILBOX_HISTORY_FILE = "mailhistory.json"
+HISTORY_ARCHIVE_FILE = "historyarchive.json"
 
 # Ensure data directory exists
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -58,6 +60,41 @@ def save_node(node):
         return
     with open(os.path.join(DATA_DIR, f"{node_id}.json"), "w", encoding="utf-8") as f:
         json.dump(node, f, ensure_ascii=False, indent=2)
+
+def clean_old_new_status():
+    """
+    遍历所有节点，检查 'new' 属性。如果创建于 3 天前，则移除 'new' 状态。
+    """
+    if not os.path.exists(DATA_DIR):
+        return
+    
+    today = datetime.date.today()
+    threshold = today - datetime.timedelta(days=3)
+    
+    for filename in os.listdir(DATA_DIR):
+        if filename.endswith(".json"):
+            filepath = os.path.join(DATA_DIR, filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    node = json.load(f)
+                
+                changed = False
+                # 如果有 new 属性且为 True
+                if node.get("new"):
+                    created_at_str = node.get("time") # 格式: YYYY-MM-DD
+                    if created_at_str:
+                        try:
+                            created_at = datetime.datetime.strptime(created_at_str, "%Y-%m-%d").date()
+                            if created_at <= threshold:
+                                node["new"] = False
+                                changed = True
+                        except ValueError:
+                            pass
+                
+                if changed:
+                    save_node(node)
+            except Exception:
+                continue
 
 def delete_node_file(node_id: int):
     # Load node data to find image path
@@ -110,6 +147,50 @@ def save_mailbox(messages):
     except IOError:
         pass
 
+def load_mail_history():
+    if not os.path.exists(MAILBOX_HISTORY_FILE):
+        return []
+    try:
+        with open(MAILBOX_HISTORY_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            return json.loads(content) if content else []
+    except (json.JSONDecodeError, IOError):
+        return []
+
+def save_mail_history(history):
+    try:
+        with open(MAILBOX_HISTORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+    except IOError:
+        pass
+
+def archive_old_mail():
+    messages = load_mailbox()
+    if not messages:
+        return
+    
+    today = datetime.datetime.now()
+    threshold = today - datetime.timedelta(days=30)
+    
+    current_messages = []
+    to_archive = []
+    
+    for msg in messages:
+        try:
+            msg_time = datetime.datetime.strptime(msg["time"], "%Y-%m-%d %H:%M:%S")
+            if msg_time < threshold:
+                to_archive.append(msg)
+            else:
+                current_messages.append(msg)
+        except (ValueError, KeyError):
+            current_messages.append(msg)
+            
+    if to_archive:
+        history = load_mail_history()
+        history.extend(to_archive)
+        save_mail_history(history)
+        save_mailbox(current_messages)
+
 def load_history():
     if not os.path.exists(HISTORY_FILE):
         return []
@@ -126,6 +207,39 @@ def save_history(history):
             json.dump(history, f, ensure_ascii=False, indent=2)
     except IOError:
         pass
+
+def load_history_archive():
+    if not os.path.exists(HISTORY_ARCHIVE_FILE):
+        return []
+    try:
+        with open(HISTORY_ARCHIVE_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            return json.loads(content) if content else []
+    except (json.JSONDecodeError, IOError):
+        return []
+
+def save_history_archive(archive):
+    try:
+        with open(HISTORY_ARCHIVE_FILE, "w", encoding="utf-8") as f:
+            json.dump(archive, f, ensure_ascii=False, indent=2)
+    except IOError:
+        pass
+
+def archive_old_history():
+    history = load_history()
+    if len(history) <= 50:
+        return
+    
+    # 按照时间从新到旧排序（假设 record_action 是 append 到末尾，所以最后面的是最新的）
+    # 但为了保险，我们取最后 50 条作为保留，前面的移入归档
+    to_archive = history[:-50]
+    to_keep = history[-50:]
+    
+    if to_archive:
+        archive = load_history_archive()
+        archive.extend(to_archive)
+        save_history_archive(archive)
+        save_history(to_keep)
 
 def load_users():
     if not os.path.exists(USERS_FILE):
@@ -158,6 +272,8 @@ def get_user_quota(user_id: str):
         user["deletes"] = 0
         user["applies"] = 0
         user["messages"] = 0
+        # 每天第一次登录时清理过期的 'new' 状态
+        clean_old_new_status()
     
     save_users(users)
     return user
@@ -364,7 +480,9 @@ def add_node(
         "extension": json.loads(extension),
         "introduction": introduction,
         "x": x,
-        "y": y
+        "y": y,
+        "time": str(datetime.date.today()),
+        "new": True
     }
     
     # Automatic connection from parent to new node
@@ -584,6 +702,9 @@ def delete_node(node_id: int, user_id: str = "guest", nickname: str = "未知用
 
 @app.get("/api/history")
 def get_history(node_id: Optional[int] = None):
+    # 先处理全站历史的 50 条限制归档
+    archive_old_history()
+    
     history = load_history()
     if node_id is not None:
         # Filter by node_id and only return the last 10 records for that node
@@ -704,6 +825,9 @@ def get_mailbox(user_id: str = "guest"):
     if user_id == "guest":
         raise HTTPException(403, "请登录后查看信箱")
     
+    # 在获取信箱内容前先执行归档操作
+    archive_old_mail()
+    
     messages = load_mailbox()
     # Sort: unprocessed first, then by time descending
     # status 'unprocessed' should come before 'processed'
@@ -753,12 +877,15 @@ def send_message(
     messages.append(new_msg)
     save_mailbox(messages)
     
-    record_action(user_id, "send_message", 0, "Mailbox", nickname)
+    # 投递信件不再记录在全站历史里
+    # record_action(user_id, "send_message", 0, "Mailbox", nickname)
     return new_msg
 
 @app.post("/api/mailbox/{msg_id}/process")
 def process_message(
     msg_id: str,
+    action: str = Form("process"), # "process" or "reject"
+    feedback: str = Form(""),
     user_id: str = Form("guest"),
     nickname: str = Form("未知用户")
 ):
@@ -771,12 +898,13 @@ def process_message(
     if not msg:
         raise HTTPException(404, "Message not found")
         
-    msg["status"] = "processed"
+    msg["status"] = "processed" if action == "process" else "rejected"
     msg["processed_by"] = nickname
     msg["processed_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    msg["feedback"] = feedback if feedback.strip() else "无"
     
     save_mailbox(messages)
-    return {"message": "Processed"}
+    return {"message": "Success"}
 
 if __name__ == "__main__":
     import uvicorn
