@@ -19,7 +19,7 @@ const emit = defineEmits(['update:searchQuery', 'handleSearch', 'selectSearchRes
     <input 
       :value="searchQuery" 
       @input="$emit('update:searchQuery', $event.target.value); $emit('handleSearch')"
-      placeholder="搜索形象或标签..." 
+      placeholder="搜索形象、标签或作品..." 
     >
     <div v-if="searchResults.length > 0" class="search-results">
       <div 
@@ -28,7 +28,7 @@ const emit = defineEmits(['update:searchQuery', 'handleSearch', 'selectSearchRes
         class="search-item"
         @click="$emit('selectSearchResult', res)"
       >
-        <span class="res-type">{{ res.type === 'node' ? '形象' : '标签' }}</span>
+        <span class="res-type">{{ res.type === 'node' ? '形象' : (res.type === 'source' ? '出处' : '标签') }}</span>
         <span class="res-name">{{ res.name }}</span>
       </div>
     </div>

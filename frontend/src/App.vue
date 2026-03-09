@@ -321,9 +321,17 @@ const handleSearch = () => {
   
   // Search nodes
   nodesData.get().forEach(node => {
+    // Search Name
     if (node.name.toLowerCase().includes(q)) {
       results.push({ type: 'node', id: node.id, name: node.name })
     }
+    // Search Source Name (Works/作品)
+    if (node.source && node.source.name && node.source.name.toLowerCase().includes(q)) {
+      if (!results.some(r => r.type === 'source' && r.name === node.source.name)) {
+        results.push({ type: 'source', name: node.source.name })
+      }
+    }
+    // Search Tags
     node.tags.forEach(tag => {
       if (tag.toLowerCase().includes(q) && !results.some(r => r.type === 'tag' && r.name === tag)) {
         results.push({ type: 'tag', name: tag })
@@ -338,7 +346,7 @@ const selectSearchResult = (res) => {
     focusNode(res.id)
     searchQuery.value = ''
     searchResults.value = []
-  } else {
+  } else if (res.type === 'tag' || res.type === 'source') {
     if (!activeFilters.value.includes(res.name)) {
       activeFilters.value.push(res.name)
     }
@@ -362,7 +370,12 @@ const applyFilters = () => {
   
   const visibleNodeIds = new Set()
   const nodeUpdates = nodesData.get().map(node => {
-    const matchesAll = activeFilters.value.every(f => node.tags.includes(f))
+    const matchesAll = activeFilters.value.every(f => {
+      // Return true if node belongs to this Work (source.name) OR has this Tag (tags)
+      const matchesSource = node.source && node.source.name === f
+      const matchesTag = node.tags.includes(f)
+      return matchesSource || matchesTag
+    })
     if (matchesAll) visibleNodeIds.add(node.id)
     return { id: node.id, opacity: matchesAll ? 1 : 0.2 }
   })
