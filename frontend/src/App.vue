@@ -1755,9 +1755,11 @@ onUnmounted(() => {
             <p>1. 本站用于记录千早爱音在中文互联网的各种形象，侵权即删。</p>
             <p>2. 点击节点可以查看该形象的详细信息。</p>
             <p>3. 用户在登录后，每日可以进行10次新增、10次修改、1次删除与3次信件投递</p>
-            <p>4. “知名二创”的标准是：该形象作品为剧情性二创，且B站播放量 ≥ 20w。</p>
-            <p>5. 如有大范围节点调整、连线增删、知名二创申请等需求，请通过信箱联系管理员。</p>
-            <p>6. 若想担任本站管理员，请联系本站站长。点击右下角“网站信息”可以显示站长的B站空间链接，私信即可。</p>
+            <p>4. “知名二创”需满足以下标准：</p>
+            <p>①该形象作品为剧情性二创</p>
+            <p>②B站单作品播放量20w+或系列播放量50w+/NGA楼层2k+/LOFTER单作品热度2k+</p>
+            <p>5. 如有知名二创申请、大范围节点调整、连线增删等需求，请通过信箱联系管理员。</p>
+            <p>6. 若想担任本站管理员，请通过B站私信联系本站站长。</p>
             <p>7. 欢迎各位观众与作者对本网站的内容进行更新！</p>
           </div>
           <div style="display: flex; justify-content: center; margin-top: 30px;">
@@ -1792,10 +1794,7 @@ onUnmounted(() => {
       <div v-if="showNotificationModal" class="modal-overlay" @click="showNotificationModal = false">
         <div class="modal-content notification-modal" @click.stop style="background: #1a1a2e; border: 2px solid #ff69b4; border-radius: 15px; width: 450px; max-width: 90vw; padding: 25px; box-shadow: 0 0 30px rgba(255, 105, 180, 0.4);">
           <h2 style="color: #ff69b4; text-align: center; margin-bottom: 20px;">有新的信件反馈！</h2>
-          <div class="notification-list" style="max-height: 450px; overflow-y: auto; padding-right: 5px; scrollbar-width: none; -ms-overflow-style: none;">
-            <style>
-              .notification-list::-webkit-scrollbar { display: none; }
-            </style>
+          <div class="notification-list" style="max-height: 450px; overflow-y: auto; padding-right: 5px;">
             <div v-for="mail in notifiedMails" :key="mail.id" class="notified-mail-item" style="border-bottom: 1px dashed rgba(255,105,180,0.3); padding: 15px 0;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #888; font-size: 0.8rem;">{{ mail.time }}</span>
@@ -2594,6 +2593,31 @@ onUnmounted(() => {
   height: 18px;
 }
 
+/* 全局滚动条样式：粉色滑块，无轨道 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #ff69b4;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #ff1493;
+}
+
+/* 兼容 Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ff69b4 transparent;
+}
+
 input,
 textarea {
   scrollbar-width: none !important;
@@ -2626,13 +2650,6 @@ textarea::-webkit-scrollbar {
   border-radius: 4px;
   font-family: inherit;
   resize: vertical;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
-
-.input-group input::-webkit-scrollbar,
-.input-group textarea::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
 }
 
 /* Pair Input Stylings */
@@ -3040,17 +3057,11 @@ textarea::-webkit-scrollbar {
   overflow-y: auto;
   flex: 1;
   padding: 60px 20px 40px 20px; 
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
   cursor: grab;
 }
 
 .panel-content:active {
   cursor: grabbing;
-}
-
-.panel-content::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
 }
 
 /* Modal Overlay */
@@ -3251,11 +3262,6 @@ textarea::-webkit-scrollbar {
   padding: 10px 20px;
   overflow-y: auto;
   flex: 1;
-  scrollbar-width: none; /* Firefox */
-}
-
-.history-list::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Edge */
 }
 
 .history-item {
@@ -3391,13 +3397,6 @@ textarea::-webkit-scrollbar {
   flex: 1;
   overflow-y: auto;
   padding: 15px;
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
-
-.mailbox-content::-webkit-scrollbar {
-  display: none;
 }
 
 .mailbox-item {
