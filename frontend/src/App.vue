@@ -9,48 +9,53 @@ import Toolbar from './components/Toolbar.vue'
 import UserAccount from './components/UserAccount.vue'
 import SearchBox from './components/SearchBox.vue'
 import HistoryModal from './components/HistoryModal.vue'
+import GuideModal from './components/GuideModal.vue'
+import NotificationModal from './components/NotificationModal.vue'
+import SiteInfoPanel from './components/SiteInfoPanel.vue'
+import MailboxModal from './components/MailboxModal.vue'
+import NewMessageModal from './components/NewMessageModal.vue'
+import FeedbackModal from './components/FeedbackModal.vue'
+import PendingApplicationsModal from './components/PendingApplicationsModal.vue'
+import ImageCropModal from './components/ImageCropModal.vue'
+import NodeSidePanel from './components/NodeSidePanel.vue'
 
 // Composables
 import { useUser } from './composables/useUser'
 import { useMouseEffects } from './composables/useMouseEffects'
+import { useHistory } from './composables/useHistory'
+import { useMailbox } from './composables/useMailbox'
+import { useImageCropper } from './composables/useImageCropper'
+import { useSearchFilter } from './composables/useSearchFilter'
 
 const apiBase = import.meta.env.DEV ? 'http://localhost:8000' : ''
 const vizContainer = ref(null)
-const fileInput = ref(null)
 
 // Use Composables
-const { currentUser, fetchUserInfo } = useUser(apiBase)
+const {
+  currentUser, isDropdownOpen, fetchUserInfo,
+  loginWithBangumi, logout, toggleDropdown, initAuthFromUrl
+} = useUser(apiBase)
 const { ripples, handleMouseMove, handleClickRipple } = useMouseEffects()
+const { showHistory, historyData, historyType, isHistoryLoading, toggleHistory } = useHistory(apiBase)
+const {
+  mailboxMessages, showMailboxModal, newMessageContent, showNewMessageModal,
+  showFeedbackModal, processingAction, feedbackContent,
+  canSendMessage, unprocessedMailCount, shouldShowExpand,
+  fetchMailbox, openMailbox, submitMailboxMessage, handleProcessMessage, submitFeedback
+} = useMailbox(apiBase, currentUser, fetchUserInfo)
 
 const loading = ref(true)
 const selectedNode = ref(null)
 const isPanelOpen = ref(false)
-const isDropdownOpen = ref(false)
 let isDraggingNode = false // Track dragging state for physics optimization
 
 const isEditing = ref(false)
 const isAdding = ref(false)
-const searchQuery = ref('')
-const searchResults = ref([])
-const activeFilters = ref([])
-
-// History state
-const showHistory = ref(false)
-const historyData = ref([])
-const historyType = ref('global') // 'global' or 'node'
 
 // Famous Fanwork state
 const showFamous = ref(false)
 const showNewNodes = ref(false)
 const pendingApplications = ref([])
-const mailboxMessages = ref([])
-const showMailboxModal = ref(false)
-const newMessageContent = ref('')
-const showNewMessageModal = ref(false)
-const showFeedbackModal = ref(false)
-const processingMessageId = ref(null)
-const processingAction = ref('')
-const feedbackContent = ref('')
 const showApplyFamousModal = ref(false)
 const showPendingApplicationsModal = ref(false)
 const showGuideModal = ref(false)
@@ -79,16 +84,8 @@ const triggerNotificationCheck = async () => {
   }
 }
 
-const canSendMessage = computed(() => {
-  if (!currentUser.logged_in) return false
-  if (currentUser.role === 'admin') return true
-  return currentUser.quota && currentUser.quota.messages < 3
-})
-
 // Site info state
 const showSiteInfo = ref(false)
-
-const isHistoryLoading = ref(false)
 
 // Connection Edit Mode state
 const isConnectionEditMode = ref(false)
@@ -108,6 +105,13 @@ const editForm = reactive({
 let network = null
 let nodesData = new DataSet([])
 let edgesData = new DataSet([])
+
+// Search & Filter composable (initialized early since nodesData/edgesData are ready)
+// focusNode is passed lazily via wrapper since it's defined later
+const {
+  searchQuery, searchResults, activeFilters,
+  handleSearch, selectSearchResult, removeFilter, applyFilters
+} = useSearchFilter(nodesData, edgesData, (nodeId) => focusNode(nodeId))
 
 // Track focused node to handle enlargement state
 const focusedNodeId = ref(null)
@@ -311,83 +315,6 @@ const renderNodes = (data) => {
   applyFilters()
 }
 
-const handleSearch = () => {
-  if (!searchQuery.value.trim()) {
-    searchResults.value = []
-    return
-  }
-  const q = searchQuery.value.toLowerCase()
-  const results = []
-  
-  // Search nodes
-  nodesData.get().forEach(node => {
-    // Search Name
-    if (node.name.toLowerCase().includes(q)) {
-      results.push({ type: 'node', id: node.id, name: node.name })
-    }
-    // Search Source Name (Works/作品)
-    if (node.source && node.source.name && node.source.name.toLowerCase().includes(q)) {
-      if (!results.some(r => r.type === 'source' && r.name === node.source.name)) {
-        results.push({ type: 'source', name: node.source.name })
-      }
-    }
-    // Search Tags
-    node.tags.forEach(tag => {
-      if (tag.toLowerCase().includes(q) && !results.some(r => r.type === 'tag' && r.name === tag)) {
-        results.push({ type: 'tag', name: tag })
-      }
-    })
-  })
-  searchResults.value = results.slice(0, 10)
-}
-
-const selectSearchResult = (res) => {
-  if (res.type === 'node') {
-    focusNode(res.id)
-    searchQuery.value = ''
-    searchResults.value = []
-  } else if (res.type === 'tag' || res.type === 'source') {
-    if (!activeFilters.value.includes(res.name)) {
-      activeFilters.value.push(res.name)
-    }
-    searchQuery.value = ''
-    searchResults.value = []
-    applyFilters()
-  }
-}
-
-const removeFilter = (tag) => {
-  activeFilters.value = activeFilters.value.filter(t => t !== tag)
-  applyFilters()
-}
-
-const applyFilters = () => {
-  if (activeFilters.value.length === 0) {
-    nodesData.update(nodesData.get().map(n => ({ id: n.id, opacity: 1 })))
-    edgesData.update(edgesData.get().map(e => ({ id: e.id, opacity: 0.6 })))
-    return
-  }
-  
-  const visibleNodeIds = new Set()
-  const nodeUpdates = nodesData.get().map(node => {
-    const matchesAll = activeFilters.value.every(f => {
-      // Return true if node belongs to this Work (source.name) OR has this Tag (tags)
-      const matchesSource = node.source && node.source.name === f
-      const matchesTag = node.tags.includes(f)
-      return matchesSource || matchesTag
-    })
-    if (matchesAll) visibleNodeIds.add(node.id)
-    return { id: node.id, opacity: matchesAll ? 1 : 0.2 }
-  })
-  nodesData.update(nodeUpdates)
-
-  const edgeUpdates = edgesData.get().map(edge => {
-    const isVisible = visibleNodeIds.has(edge.from) && visibleNodeIds.has(edge.to)
-    return { id: edge.id, opacity: isVisible ? 0.6 : 0.1 }
-  })
-  edgesData.update(edgeUpdates)
-}
-
 const focusNode = (nodeId) => {
   const node = nodesData.get(nodeId)
   if (node) {
@@ -510,139 +437,12 @@ const cancelEdit = () => {
   parentIdForNewNode.value = null
 }
 
-// Image Cropping logic
-const showCropModal = ref(false)
-const rawImageBuf = ref(null)
-const cropCanvas = ref(null)
-const cropperState = reactive({
-  img: new Image(),
-  x: 0,
-  y: 0,
-  scale: 1,
-  dragging: false,
-  startX: 0,
-  startY: 0
-})
-
-const handleImageUpload = (e) => {
-  const file = e.target.files[0]
-  if (file) {
-    if (file.size > 2 * 1024 * 1024) {
-      alert('图片大小不能超过 2MB')
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      rawImageBuf.value = event.target.result
-      cropperState.img = new Image() // Ensure new instance
-      cropperState.img.src = event.target.result
-      cropperState.img.onload = () => {
-        cropperState.x = 0
-        cropperState.y = 0
-        cropperState.scale = 1
-        showCropModal.value = true
-        nextTick(() => drawCropCanvas())
-      }
-    }
-    reader.readAsDataURL(file)
-  }
-  // Reset input value so same file can be uploaded again
-  e.target.value = ''
-}
-
-const drawCropCanvas = () => {
-  const canvas = cropCanvas.value
-  if (!canvas) return
-  const ctx = canvas.getContext('2d')
-  const size = 300
-  canvas.width = size
-  canvas.height = size
-  
-  ctx.clearRect(0, 0, size, size)
-  
-  const img = cropperState.img
-  const aspect = img.width / img.height
-  let drawW, drawH
-  if (aspect > 1) {
-    drawW = size * cropperState.scale * aspect
-    drawH = size * cropperState.scale
-  } else {
-    drawW = size * cropperState.scale
-    drawH = size * cropperState.scale / aspect
-  }
-  
-  ctx.drawImage(img, cropperState.x - drawW/2 + size/2, cropperState.y - drawH/2 + size/2, drawW, drawH)
-  
-  // Mask
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
-  ctx.beginPath()
-  ctx.rect(0, 0, size, size)
-  ctx.arc(size/2, size/2, size/2 * 0.9, 0, Math.PI * 2, true)
-  ctx.fill()
-  
-  // Border
-  ctx.strokeStyle = '#ff69b4'
-  ctx.lineWidth = 2
-  ctx.beginPath()
-  ctx.arc(size/2, size/2, size/2 * 0.9, 0, Math.PI * 2)
-  ctx.stroke()
-}
-
-const handleCropMouseDown = (e) => {
-  cropperState.dragging = true
-  cropperState.startX = e.clientX - cropperState.x
-  cropperState.startY = e.clientY - cropperState.y
-}
-
-const handleCropMouseMove = (e) => {
-  if (cropperState.dragging) {
-    cropperState.x = e.clientX - cropperState.startX
-    cropperState.y = e.clientY - cropperState.startY
-    drawCropCanvas()
-  }
-}
-
-const handleCropMouseUp = () => {
-  cropperState.dragging = false
-}
-
-const handleCropWheel = (e) => {
-  e.preventDefault()
-  const delta = e.deltaY > 0 ? 0.9 : 1.1
-  cropperState.scale *= delta
-  drawCropCanvas()
-}
-
-const confirmCrop = () => {
-  const canvas = document.createElement('canvas')
-  const size = 400
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext('2d')
-  
-  const img = cropperState.img
-  const aspect = img.width / img.height
-  let drawW, drawH
-  if (aspect > 1) {
-    drawW = size * cropperState.scale * aspect
-    drawH = size * cropperState.scale
-  } else {
-    drawW = size * cropperState.scale
-    drawH = size * cropperState.scale / aspect
-  }
-  
-  ctx.drawImage(img, (cropperState.x * (size/300)) - drawW/2 + size/2, (cropperState.y * (size/300)) - drawH/2 + size/2, drawW, drawH)
-  
-  canvas.toBlob((blob) => {
-    editForm.imageFile = new File([blob], "avatar.webp", { type: "image/webp" })
-    editForm.imagePreview = URL.createObjectURL(blob)
-    showCropModal.value = false
-  }, 'image/webp')
-}
-
-const cancelCrop = () => {
-  showCropModal.value = false
-}
+// Image Cropping logic (composable)
+const {
+  showCropModal, cropCanvas,
+  handleImageUpload, handleCropMouseDown, handleCropMouseMove,
+  handleCropMouseUp, handleCropWheel, confirmCrop, cancelCrop
+} = useImageCropper(editForm)
 
 const addRelated = () => {
   editForm.related.push({ name: '', link: '', type: '其他' })
@@ -652,15 +452,7 @@ const removeRelated = (index) => {
   editForm.related.splice(index, 1)
 }
 
-// Side Panel Drag-to-Scroll Logic
-const panelContent = ref(null)
-const panelState = reactive({ isDragging: false, startY: 0, scrollStart: 0 })
-
-const handlePanelMouseDown = (e) => {
-  panelState.isDragging = true
-  panelState.startY = e.pageY - panelContent.value.offsetTop
-  panelState.scrollStart = panelContent.value.scrollTop
-}
+// Side Panel drag logic now handled by NodeSidePanel component
 
 const handlePanelMouseMove = (e) => {
   if (!panelState.isDragging) return
@@ -846,50 +638,6 @@ const saveNodePosition = async () => {
   }
 }
 
-const loginWithBangumi = async () => {
-  try {
-    const response = await axios.get(`${apiBase}/api/auth/login`)
-    window.location.href = response.data.url
-  } catch (error) {
-    alert('无法获取登录链接')
-  }
-}
-
-const logout = () => {
-  localStorage.removeItem('user_id')
-  localStorage.removeItem('nickname')
-  fetchUserInfo('guest', '游客')
-  isDropdownOpen.value = false
-}
-
-const toggleDropdown = (e) => {
-  if (e) e.stopPropagation()
-  isDropdownOpen.value = !isDropdownOpen.value
-}
-
-const toggleHistory = async (nodeId = null) => {
-  if (showHistory.value) {
-    showHistory.value = false
-    return
-  }
-  showHistory.value = true // Show modal immediately
-  await fetchHistory(nodeId)
-}
-
-const fetchHistory = async (nodeId = null) => {
-  isHistoryLoading.value = true
-  try {
-    const url = nodeId ? `${apiBase}/api/history?node_id=${nodeId}` : `${apiBase}/api/history`
-    const response = await axios.get(url)
-    historyData.value = response.data
-    historyType.value = nodeId ? 'node' : 'global'
-  } catch (error) {
-    console.error('Failed to fetch history:', error)
-  } finally {
-    isHistoryLoading.value = false
-  }
-}
-
 const fetchPendingApplications = async () => {
   if (currentUser.role !== 'admin') return
   try {
@@ -900,93 +648,6 @@ const fetchPendingApplications = async () => {
   } catch (error) {
     console.error('Failed to fetch applications:', error)
   }
-}
-
-const fetchMailbox = async () => {
-  if (!currentUser.logged_in) return
-  try {
-    const response = await axios.get(`${apiBase}/api/mailbox`, {
-      params: { user_id: currentUser.user_id }
-    })
-    mailboxMessages.value = response.data
-  } catch (error) {
-    console.error('Failed to fetch mailbox:', error)
-  }
-}
-
-const openMailbox = async () => {
-  await fetchMailbox()
-  showMailboxModal.value = true
-}
-
-const submitMailboxMessage = async () => {
-  if (!newMessageContent.value.trim()) {
-    alert('请输入信件内容')
-    return
-  }
-  if (newMessageContent.value.length > 200) {
-    alert('内容不能超过200字')
-    return
-  }
-  
-  const formData = new FormData()
-  formData.append('content', newMessageContent.value)
-  formData.append('user_id', currentUser.user_id)
-  formData.append('nickname', currentUser.nickname)
-  
-  try {
-    await axios.post(`${apiBase}/api/mailbox`, formData)
-    newMessageContent.value = ''
-    showNewMessageModal.value = false
-    await fetchMailbox()
-    await fetchUserInfo(currentUser.user_id, currentUser.nickname)
-  } catch (error) {
-    alert(error.response?.data?.detail || '发送失败')
-  }
-}
-
-const handleProcessMessage = (msgId, action) => {
-  processingMessageId.value = msgId
-  processingAction.value = action
-  feedbackContent.value = ''
-  showFeedbackModal.value = true
-}
-
-const submitFeedback = async () => {
-  if (feedbackContent.value.length > 30) {
-    alert('反馈不能超过30字')
-    return
-  }
-  
-  const formData = new FormData()
-  formData.append('action', processingAction.value)
-  formData.append('feedback', feedbackContent.value)
-  formData.append('user_id', currentUser.user_id)
-  formData.append('nickname', currentUser.nickname)
-  
-  try {
-    await axios.post(`${apiBase}/api/mailbox/${processingMessageId.value}/process`, formData)
-    showFeedbackModal.value = false
-    await fetchMailbox()
-  } catch (error) {
-    console.error('Failed to process message:', error)
-    alert('提交失败')
-  }
-}
-
-const unprocessedMailCount = computed(() => {
-  return mailboxMessages.value.filter(m => m.status === 'unprocessed').length
-})
-
-const shouldShowExpand = (msg) => {
-  // Simple heuristic: if content is long enough or has multiple newlines
-  if (!msg.content) return false;
-  const lines = msg.content.split('\n').length;
-  // If more than 2 lines, show expand
-  if (lines > 2) return true;
-  // If text is very long (approx more than 2 lines of container width)
-  if (msg.content.length > 60) return true;
-  return false;
 }
 
 const openPendingApplications = () => {
@@ -1405,43 +1066,14 @@ const initNetwork = () => {
   })
 }
 
-onMounted(async () => {
-  // Check URL for callback params
-  const params = new URLSearchParams(window.location.search)
-  const userIdFromUrl = params.get('user_id')
-  const nicknameFromUrl = params.get('nickname')
+const globalClickHandler = (e) => {
+  isDropdownOpen.value = false
+  closePopups()
+  handleClickRipple(e)
+}
 
-  if (userIdFromUrl && nicknameFromUrl) {
-    console.log("Found auth params in URL, saving to storage:", userIdFromUrl, nicknameFromUrl);
-    localStorage.setItem('user_id', userIdFromUrl)
-    localStorage.setItem('nickname', nicknameFromUrl)
-    
-    // Update local state immediately before fetching to ensure UI reflects login status
-    // independent of network latency or potential fetch failures
-    currentUser.user_id = userIdFromUrl
-    currentUser.nickname = nicknameFromUrl
-    currentUser.logged_in = true
-    
-    // IMPORTANT: Fetch info using the URL values directly to avoid any race condition
-    await fetchUserInfo(userIdFromUrl, nicknameFromUrl)
-    
-    // Clean up URL securely without causing a reload or navigation
-    // Only replace state if we are sure we've processed the login
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('user_id');
-      url.searchParams.delete('nickname');
-      window.history.replaceState({}, '', url.toString());
-    } catch (e) {
-      console.error("Failed to clean URL params", e);
-    }
-  } else {
-    // Normal load from storage
-    const savedUserId = localStorage.getItem('user_id') || 'guest'
-    const savedNickname = localStorage.getItem('nickname') || '游客'
-    await fetchUserInfo(savedUserId, savedNickname)
-  }
-  
+onMounted(async () => {
+  await initAuthFromUrl()
   await fetchGraphData()
   initNetwork()
   await fetchMailbox()
@@ -1453,16 +1085,12 @@ onMounted(async () => {
     }, 1500)
   }
 
-  window.addEventListener('click', (e) => {
-    isDropdownOpen.value = false
-    closePopups()
-    handleClickRipple(e)
-  })
-  
+  window.addEventListener('click', globalClickHandler)
   window.addEventListener('mousemove', handleMouseMove)
 })
 
 onUnmounted(() => {
+  window.removeEventListener('click', globalClickHandler)
   window.removeEventListener('mousemove', handleMouseMove)
 })
 </script>
@@ -1519,14 +1147,6 @@ onUnmounted(() => {
       <button class="info-btn pink-btn" @click.stop="toggleSiteInfo">网站信息</button>
     </div>
 
-    <!-- Modals -->
-    <HistoryModal 
-      :showHistory="showHistory"
-      :historyData="historyData"
-      :historyType="historyType"
-      :isHistoryLoading="isHistoryLoading"
-      @close="showHistory = false"
-    />
     <div 
       ref="vizContainer" 
       class="graph-container" 
@@ -1534,206 +1154,33 @@ onUnmounted(() => {
     ></div>
 
     <!-- Right Panel -->
-    <Transition name="slide">
-      <div v-if="isPanelOpen" class="side-panel">
-        
-        <div 
-          class="panel-content"
-          ref="panelContent"
-          @mousedown="handlePanelMouseDown"
-          @mousemove="handlePanelMouseMove"
-          @mouseup="handlePanelMouseUp"
-          @mouseleave="handlePanelMouseUp"
-        >
-          <!-- Node History Button (Pink, Round, SVG Icon) - Moved inside to scroll with content -->
-          <button 
-            v-if="!isEditing && !isAdding" 
-            class="node-update-history-btn-round" 
-            title="更新记录"
-            @click.stop="toggleHistory(selectedNode.id)"
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          
-          <!-- View Mode -->
-          <template v-if="!isEditing && !isAdding && selectedNode">
-            <!-- Close Button (Moved inside to scroll with content) -->
-            <button class="panel-inner-close-btn" @click="isPanelOpen = false" title="关闭面板">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-
-            <div class="image-container">
-              <img 
-                :src="selectedNode.image ? (selectedNode.image.startsWith('http') ? selectedNode.image : `${apiBase}${selectedNode.image}`) : `${apiBase}/images/default.webp`" 
-                :alt="selectedNode.name"
-                :onerror="`this.src='${apiBase}/images/default.webp'`"
-              >
-            </div>
-            
-            <h2 class="node-name">
-              <span v-if="selectedNode.is_famous" title="已认证知名二创" style="color: #ff69b4; margin-right: 5px; cursor: help;">★</span>
-              {{ selectedNode.name }}
-            </h2>
-            
-            <div class="info-item">
-              <label>出处：</label>
-              <div style="display: inline-flex; align-items: center; gap: 8px;">
-                <a v-if="selectedNode.source.link" :href="selectedNode.source.link" target="_blank" class="info-link">{{ selectedNode.source.name }}</a>
-                <span v-else>{{ selectedNode.source.name }}</span>
-                <span v-if="selectedNode.source.type" class="res-type" style="font-size: 10px; padding: 1px 4px; margin: 0;">{{ selectedNode.source.type }}</span>
-              </div>
-            </div>
-
-            <div class="info-item" v-if="selectedNode.introduction">
-              <label>介绍：</label>
-              <span class="info-intro">{{ selectedNode.introduction }}</span>
-            </div>
-            
-            <div class="info-item" v-if="selectedNode.tags && selectedNode.tags.length > 0">
-              <label>标签：</label>
-              <div class="tag-list">
-                <span v-for="tag in selectedNode.tags" :key="tag" class="tag">{{ tag }}</span>
-              </div>
-            </div>
-            
-            <div class="info-item" v-if="selectedNode.related && selectedNode.related.length > 0">
-              <label>相关作品：</label>
-              <div class="related-list">
-                <div v-for="(item, idx) in selectedNode.related" :key="idx" class="related-item" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                  <a v-if="item.link" :href="item.link" target="_blank" class="info-link">{{ item.name }}</a>
-                  <span v-else>{{ item.name }}</span>
-                  <span v-if="item.type" class="res-type" style="font-size: 10px; padding: 1px 4px; margin: 0;">{{ item.type }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="action-buttons-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
-              <div class="action-buttons" style="margin-top: 0;">
-                <button 
-                  class="btn edit" 
-                  :disabled="!canEditSelectedNode" 
-                  :title="!canEditSelectedNode ? '今日修改配额已用完' : ''"
-                  @click="startEdit"
-                >修改</button>
-                <button 
-                  class="btn add" 
-                  :disabled="!canAddNode"
-                  :title="!canAddNode ? '今日新增配额已用完' : ''"
-                  @click="startAdd"
-                >新增</button>
-                <button 
-                  class="btn delete" 
-                  :class="{ 'disabled-btn': !canDeleteSelectedNode }" 
-                  :disabled="!canDeleteSelectedNode"
-                  @click="deleteNode"
-                  :title="deleteDisabledReason"
-                >删除</button>
-              </div>
-              <div class="action-buttons" v-if="currentUser.role === 'admin'" style="margin-top: 0;">
-                <button 
-                  class="btn save-pos" 
-                  @click="saveNodePosition"
-                  title="保存当前节点位置"
-                >保存位置</button>
-                <button 
-                  class="btn famous-toggle" 
-                  @click="toggleFamousStatus"
-                  title="切换知名二创状态"
-                  style="background: #87CEEB;"
-                >{{ selectedNode.is_famous ? '取消知名' : '设为知名' }}</button>
-                <button 
-                  class="btn connection-toggle" 
-                  @click="toggleConnectionEditMode"
-                  title="点击图中节点以增删连线"
-                  :style="{ background: isConnectionEditMode ? '#ff6b6b' : '#9c88ff' }"
-                >{{ isConnectionEditMode ? '停止连线' : '增删连线' }}</button>
-              </div>
-            </div>
-          </template>
-
-          <!-- Edit/Add Mode -->
-          <template v-else>
-            <h2 class="node-name">{{ isAdding ? '新增形象' : '修改形象' }}</h2>
-            
-            <div class="image-container editable" @click="fileInput.click()">
-              <template v-if="editForm.imagePreview">
-                <img :src="editForm.imagePreview">
-                <div class="hover-mask">
-                  <span>上传图片</span>
-                </div>
-              </template>
-              <div v-else class="upload-placeholder">
-                <span>暂无图片</span>
-                <small>点击上传</small>
-              </div>
-              <input type="file" ref="fileInput" hidden @change="handleImageUpload" accept="image/*">
-            </div>
-
-            <div class="input-group">
-              <label>形象名字</label>
-              <input v-model="editForm.name" placeholder="名字">
-            </div>
-
-            <div class="input-group">
-              <label>出处</label>
-              <div class="pair-input-row">
-                <div class="pair-input">
-                  <input v-model="editForm.source.name" placeholder="作品名字">
-                  <input v-model="editForm.source.link" placeholder="链接 (可选)">
-                  <select v-model="editForm.source.type" class="type-select">
-                    <option>小说</option>
-                    <option>视频</option>
-                    <option>插画</option>
-                    <option>漫画</option>
-                    <option>游戏</option>
-                    <option>其他</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="input-group">
-              <label>介绍</label>
-              <textarea v-model="editForm.introduction" placeholder="简单介绍一下这个版本/形象..." rows="3"></textarea>
-            </div>
-
-            <div class="input-group">
-              <label>标签 (逗号分隔)</label>
-              <input v-model="editForm.tags" placeholder="标签1, 标签2">
-            </div>
-
-            <div class="input-group">
-              <label>相关作品</label>
-              <div v-for="(item, index) in editForm.related" :key="index" class="pair-input-row">
-                <div class="pair-input">
-                  <input v-model="item.name" placeholder="名字" style="flex: 1.5; min-width: 80px;">
-                  <input v-model="item.link" placeholder="链接 (可选)" style="flex: 2; min-width: 100px;">
-                  <select v-model="item.type" class="type-select">
-                    <option>小说</option>
-                    <option>视频</option>
-                    <option>插画</option>
-                    <option>漫画</option>
-                    <option>游戏</option>
-                    <option>其他</option>
-                  </select>
-                </div>
-                <button class="remove-btn" @click="removeRelated(index)" title="删除此项">×</button>
-              </div>
-              <button class="add-btn" @click="addRelated">+ 添加作品</button>
-            </div>
-
-            <div class="form-actions">
-              <button class="btn confirm" @click="submitForm">确认</button>
-              <button class="btn cancel" @click="cancelEdit">取消</button>
-            </div>
-          </template>
-        </div>
-      </div>
-    </Transition>
+    <NodeSidePanel
+      :isPanelOpen="isPanelOpen"
+      :isEditing="isEditing"
+      :isAdding="isAdding"
+      :selectedNode="selectedNode"
+      :editForm="editForm"
+      :apiBase="apiBase"
+      :currentUser="currentUser"
+      :canEditSelectedNode="canEditSelectedNode"
+      :canAddNode="canAddNode"
+      :canDeleteSelectedNode="canDeleteSelectedNode"
+      :deleteDisabledReason="deleteDisabledReason"
+      :isConnectionEditMode="isConnectionEditMode"
+      @close="isPanelOpen = false"
+      @toggleHistory="toggleHistory"
+      @startEdit="startEdit"
+      @startAdd="startAdd"
+      @cancelEdit="cancelEdit"
+      @submitForm="submitForm"
+      @deleteNode="deleteNode"
+      @saveNodePosition="saveNodePosition"
+      @toggleFamousStatus="toggleFamousStatus"
+      @toggleConnectionEditMode="toggleConnectionEditMode"
+      @addRelated="addRelated"
+      @removeRelated="removeRelated"
+      @imageUpload="handleImageUpload"
+    />
 
     <!-- Modals -->
     <HistoryModal 
@@ -1747,222 +1194,65 @@ onUnmounted(() => {
     />
 
     <!-- Guide Modal -->
-    <Transition name="fade">
-      <div v-if="showGuideModal" class="modal-overlay" @click="closeGuide">
-        <div class="guide-modal" @click.stop style="background: #1a1a2e; border: 2px solid #ff69b4; border-radius: 15px; width: 450px; max-width: 90vw; padding: 30px; box-shadow: 0 0 30px rgba(255, 105, 180, 0.4);">
-          <h2 style="color: #ff69b4; text-align: center; margin-bottom: 25px; font-size: 1.5rem;">千早爱音宇宙漫游指南</h2>
-          <div style="color: #eee; line-height: 1.8; font-size: 0.95rem;">
-            <p>1. 本站用于记录千早爱音在中文互联网的各种形象，侵权即删。</p>
-            <p>2. 点击节点可以查看该形象的详细信息。</p>
-            <p>3. 用户在登录后，每日可以进行10次新增、10次修改、1次删除与3次信件投递</p>
-            <p>4. “知名二创”需满足以下标准：</p>
-            <p>①该形象作品为剧情性二创</p>
-            <p>②B站单作品播放量20w+或系列播放量50w+/NGA楼层2k+/LOFTER单作品热度2k+</p>
-            <p>5. 如有知名二创申请、大范围节点调整、连线增删等需求，请通过信箱联系管理员。</p>
-            <p>6. 若想担任本站管理员，请通过B站私信联系本站站长。</p>
-            <p>7. 欢迎各位观众与作者对本网站的内容进行更新！</p>
-          </div>
-          <div style="display: flex; justify-content: center; margin-top: 30px;">
-            <button class="btn confirm" style="padding: 10px 40px; font-size: 1rem;" @click="closeGuide">出发！</button>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <GuideModal :show="showGuideModal" @close="closeGuide" />
 
     <!-- Site Info Bottom Panel -->
-    <Transition name="slide-up">
-      <div v-if="showSiteInfo" class="site-info-panel" @click.stop>
-        <div class="site-info-grid">
-          <div class="info-section">
-            <h4>开发者&站长</h4>
-            <a href="https://space.bilibili.com/365169149" target="_blank" class="info-link">空之堇</a>
-          </div>
-          <div class="info-section">
-            <h4>特别鸣谢</h4>
-            <a href="https://space.bilibili.com/3493081661836152" target="_blank" class="info-link">璀璨水晶Crystal</a>
-          </div>
-          <div class="info-section">
-            <h4>Github仓库</h4>
-            <a href="https://github.com/Node000/AnonUniverse" target="_blank" class="info-link">AnonUniverse</a>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <SiteInfoPanel :show="showSiteInfo" />
 
     <!-- Mailbox Feedback Notification Modal -->
-    <Transition name="fade">
-      <div v-if="showNotificationModal" class="modal-overlay" @click="showNotificationModal = false">
-        <div class="modal-content notification-modal" @click.stop style="background: #1a1a2e; border: 2px solid #ff69b4; border-radius: 15px; width: 450px; max-width: 90vw; padding: 25px; box-shadow: 0 0 30px rgba(255, 105, 180, 0.4);">
-          <h2 style="color: #ff69b4; text-align: center; margin-bottom: 20px;">有新的信件反馈！</h2>
-          <div class="notification-list" style="max-height: 450px; overflow-y: auto; padding-right: 5px;">
-            <div v-for="mail in notifiedMails" :key="mail.id" class="notified-mail-item" style="border-bottom: 1px dashed rgba(255,105,180,0.3); padding: 15px 0;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #888; font-size: 0.8rem;">{{ mail.time }}</span>
-                <span :style="{ color: mail.status === 'processed' ? '#50e3c2' : '#ff4d4f', fontSize: '0.9rem', fontWeight: 'bold' }">
-                  {{ mail.status === 'processed' ? '已处理' : '已拒绝' }}
-                </span>
-              </div>
-              <div style="color: #eee; margin-bottom: 10px; font-size: 0.95rem; line-height: 1.4; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 5px; white-space: pre-wrap; word-break: break-all;">
-                {{ mail.content }}
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 4px;">
-                <div style="color: #ff69b4; font-size: 0.9rem; white-space: pre-wrap;">反馈：{{ mail.feedback }}</div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                  <span style="color: #666; font-size: 0.75rem;">处理时间：{{ mail.processed_time || mail.time }}</span>
-                  <span style="color: #00ffff; font-size: 0.8rem;">处理人：{{ mail.processed_by }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <button @click="showNotificationModal = false" class="pink-btn" style="width: 100%; margin-top: 20px; padding: 10px; border-radius: 20px; font-weight: bold;">我知道了</button>
-        </div>
-      </div>
-    </Transition>
+    <NotificationModal
+      :show="showNotificationModal"
+      :notifiedMails="notifiedMails"
+      @close="showNotificationModal = false"
+    />
 
     <!-- Mailbox Modal -->
-    <div v-if="showMailboxModal" class="modal-overlay" @click="showMailboxModal = false">
-      <div class="mailbox-modal" @click.stop :class="{ 'light-mode': !isDarkMode }">
-        <div class="modal-header" style="position: relative;">
-          <h3 style="width: 100%; text-align: center;">信箱</h3>
-          <button class="close-btn" @click="showMailboxModal = false" style="position: absolute; right: 15px; top: 15px; color: #ff69b4; background: none; border: none; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
-        </div>
-        <div class="mailbox-content">
-          <div class="mailbox-add-btn-wrapper">
-             <button 
-               class="mailbox-add-btn-large" 
-               @click="showNewMessageModal = true"
-               :disabled="!canSendMessage"
-               :title="!canSendMessage ? '今日信件配额已用完' : ''"
-               :style="{ opacity: canSendMessage ? 1 : 0.5, cursor: canSendMessage ? 'pointer' : 'not-allowed' }"
-             >
-                <span>{{ canSendMessage ? '+ 投递新信件' : '今日投递配额已用完' }}</span>
-             </button>
-          </div>
-          <div v-if="mailboxMessages.length === 0" class="no-messages">暂无信件</div>
-          <div v-for="msg in mailboxMessages" :key="msg.id" class="mailbox-item" :class="msg.status">
-            <div class="msg-main">
-              <div class="msg-header">
-                <span class="msg-user">{{ msg.nickname }}</span>
-                <span class="msg-time">{{ msg.time }}</span>
-              </div>
-              <div class="msg-body">
-                <div 
-                  class="msg-body-inner" 
-                  :class="{ 'expanded': msg.isExpanded }"
-                  :id="'msg-content-' + msg.id"
-                >
-                  {{ msg.content }}
-                </div>
-                <div 
-                  v-if="shouldShowExpand(msg)" 
-                  class="expand-toggle" 
-                  @click.stop="msg.isExpanded = !msg.isExpanded"
-                >
-                  {{ msg.isExpanded ? '收起' : '展开全文' }}
-                </div>
-              </div>
-            </div>
-            <div class="msg-status">
-              <template v-if="msg.status === 'unprocessed'">
-                <div v-if="currentUser.role === 'admin'" style="display: flex; gap: 5px;">
-                  <button class="process-btn" @click="handleProcessMessage(msg.id, 'process')">处理</button>
-                  <button class="reject-btn" @click="handleProcessMessage(msg.id, 'reject')" style="background: #ff4d4f; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">拒绝</button>
-                </div>
-                <span v-else class="status-text unprocessed">未处理</span>
-              </template>
-              <template v-else>
-                <div class="status-info">
-                  <span>{{ msg.status === 'processed' ? '已处理' : '拒绝' }}</span>
-                  <span class="feedback-info" style="color: #ff69b4;">
-                    反馈：{{ msg.feedback || '无' }}
-                  </span>
-                  <span>处理人：{{ msg.processed_by }}</span>
-                  <span>时间：{{ msg.processed_time }}</span>
-                </div>
-              </template>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <MailboxModal
+      :show="showMailboxModal"
+      :isDarkMode="isDarkMode"
+      :mailboxMessages="mailboxMessages"
+      :canSendMessage="canSendMessage"
+      :currentUser="currentUser"
+      @close="showMailboxModal = false"
+      @openNewMessage="showNewMessageModal = true"
+      @processMessage="handleProcessMessage"
+    />
 
     <!-- New Message Modal -->
-    <div v-if="showNewMessageModal" class="modal-overlay" @click="showNewMessageModal = false">
-      <div class="new-message-modal" @click.stop :class="{ 'light-mode': !isDarkMode }">
-        <div class="modal-header" style="position: relative;">
-          <h3 style="width: 100%; text-align: center;">投递信件</h3>
-          <button class="close-btn" @click="showNewMessageModal = false" style="position: absolute; right: 10px; top: 10px; background: none; border: none; color: inherit; font-size: 20px; cursor: pointer;">&times;</button>
-        </div>
-        <div class="modal-body">
-          <textarea 
-            v-model="newMessageContent" 
-            placeholder="请输入信件内容（最多200字）" 
-            maxlength="200"
-          ></textarea>
-          <div class="char-count">{{ newMessageContent.length }}/200</div>
-        </div>
-        <div class="modal-footer" style="display: flex; justify-content: center; gap: 30px; padding: 15px 30px;">
-          <button class="btn confirm" @click="submitMailboxMessage">确认</button>
-          <button class="btn cancel" @click="showNewMessageModal = false">取消</button>
-        </div>
-      </div>
-    </div>
+    <NewMessageModal
+      :show="showNewMessageModal"
+      :isDarkMode="isDarkMode"
+      v-model="newMessageContent"
+      @close="showNewMessageModal = false"
+      @submit="submitMailboxMessage"
+    />
 
     <!-- Feedback Modal -->
-    <div v-if="showFeedbackModal" class="modal-overlay" @click="showFeedbackModal = false">
-      <div class="new-message-modal" @click.stop :class="{ 'light-mode': !isDarkMode }">
-        <div class="modal-header" style="position: relative;">
-          <h3 style="width: 100%; text-align: center;">信件反馈 ({{ processingAction === 'process' ? '处理' : '拒绝' }})</h3>
-          <button class="close-btn" @click="showFeedbackModal = false" style="position: absolute; right: 10px; top: 10px; background: none; border: none; color: inherit; font-size: 20px; cursor: pointer;">&times;</button>
-        </div>
-        <div class="modal-body">
-          <textarea 
-            v-model="feedbackContent" 
-            placeholder="请输入反馈内容（最多30字，可选）" 
-            maxlength="30"
-          ></textarea>
-          <div class="char-count">{{ feedbackContent.length }}/30</div>
-        </div>
-        <div class="modal-footer" style="display: flex; justify-content: center; gap: 30px; padding: 15px 30px;">
-          <button class="btn confirm" @click="submitFeedback">确认</button>
-          <button class="btn cancel" @click="showFeedbackModal = false">取消</button>
-        </div>
-      </div>
-    </div>
+    <FeedbackModal
+      :show="showFeedbackModal"
+      :isDarkMode="isDarkMode"
+      v-model="feedbackContent"
+      :actionLabel="processingAction === 'process' ? '处理' : '拒绝'"
+      @close="showFeedbackModal = false"
+      @submit="submitFeedback"
+    />
 
     <!-- Pending Applications Modal -->
-    <div v-if="showPendingApplicationsModal" class="modal-overlay" @click="showPendingApplicationsModal = false">
-      <div class="pending-applications-modal" @click.stop style="background: #1a1a2e; border: 1px solid #ff69b4; border-radius: 10px; width: 90%; max-width: 500px; max-height: 80vh; display: flex; flex-direction: column;">
-        <div class="modal-header" style="position: relative; display: flex; justify-content: center; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255, 105, 180, 0.3);">
-          <h3 style="margin: 0; color: #ff69b4;">待认证申请</h3>
-          <button class="close-btn" @click="showPendingApplicationsModal = false" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #ff69b4; background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
-        </div>
-        <div class="modal-body" style="padding: 20px; overflow-y: auto; flex: 1;">
-          <div v-if="pendingApplications.length === 0" style="text-align: center; color: #888;">暂无申请</div>
-          <div v-for="app in pendingApplications" :key="app.id" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); gap: 10px;">
-            <div style="flex: 1; word-break: break-all; color: #fff;">
-              <span style="color: #50e3c2;">{{ app.nickname }}</span> 申请 
-              <span 
-                style="color: #ff69b4; cursor: pointer; text-decoration: underline;" 
-                @click="focusNode(app.node_id); showPendingApplicationsModal = false"
-              >{{ app.node_name }}</span> 
-              为<span style="color: #87CEEB;">知名二创</span>
-            </div>
-            <div style="display: flex; gap: 10px; flex-shrink: 0;">
-              <button class="btn confirm" style="padding: 5px 10px; font-size: 12px;" @click="processApplication(app.id, 'approve')">同意</button>
-              <button class="btn delete" style="padding: 5px 10px; font-size: 12px;" @click="processApplication(app.id, 'reject')">拒绝</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <PendingApplicationsModal
+      :show="showPendingApplicationsModal"
+      :pendingApplications="pendingApplications"
+      @close="showPendingApplicationsModal = false"
+      @approve="(id) => processApplication(id, 'approve')"
+      @reject="(id) => processApplication(id, 'reject')"
+      @focusNode="focusNode"
+    />
 
     <!-- Crop Modal -->
     <div v-if="showCropModal" class="crop-modal-overlay">
       <div class="crop-modal">
         <h3>裁剪图片</h3>
         <p class="crop-tip">滚轮缩放，左键拖动</p>
-        <div 
+        <div
           class="canvas-container"
           @mousedown="handleCropMouseDown"
           @mousemove="handleCropMouseMove"
