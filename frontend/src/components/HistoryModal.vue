@@ -92,9 +92,9 @@ const historyTitle = computed(() => {
   filter: brightness(1.2);
 }
 /* Ensure roles and actions are colored */
-.admin { color: #ff69b4; }
-.user { color: #87CEEB; }
-.add { color: #50e3c2; }
-.edit { color: #f5a623; }
+.admin { color: #87CEEB; }
+.user { color: #ff69b4; }
+.add { color: #22c55e; }
+.edit { color: #ffd60a; }
 .delete { color: #ff4d4f; }
 </style>
