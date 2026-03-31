@@ -71,7 +71,12 @@ const shouldShowExpand = (msg) => {
             </template>
             <template v-else>
               <div class="status-info">
-                <span>{{ msg.status === 'processed' ? '已处理' : '拒绝' }}</span>
+                <span
+                  class="status-label"
+                  :class="msg.status === 'processed' ? 'processed' : 'rejected'"
+                >
+                  {{ msg.status === 'processed' ? '已处理' : '已拒绝' }}
+                </span>
                 <span class="feedback-info" style="color: #ff69b4;">
                   反馈：{{ msg.feedback || '无' }}
                 </span>

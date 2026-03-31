@@ -1498,10 +1498,17 @@ textarea::-webkit-scrollbar {
   gap: 2px;
 }
 
-.status-info span:first-child {
-  color: #50e3c2;
+.status-info .status-label {
   font-weight: bold;
   font-size: 11px;
+}
+
+.status-info .status-label.processed {
+  color: #50e3c2;
+}
+
+.status-info .status-label.rejected {
+  color: #ff7a45;
 }
 
 .status-info .feedback-info {

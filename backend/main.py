@@ -513,13 +513,14 @@ def get_user_info(user_id: str = "guest", nickname: str = "游客"):
     user_data = load_user(user_id)
     quota = get_user_quota(user_id)
     role = "admin" if user_id in admins else "user"
+    notifications = user_data.get("notifications", []) if user_data else []
     return {
         "logged_in": True,
         "user_id": user_id,
         "nickname": nickname,
         "role": role,
         "quota": quota,
-        "notifications": user_data.get("notifications", [])
+        "notifications": notifications
     }
 
 @app.post("/api/nodes")
@@ -921,26 +922,17 @@ def get_mailbox(user_id: str = "guest"):
     archive_old_mail()
     
     messages = load_mailbox()
-    # Sort: unprocessed first, then by time descending
-    # status 'unprocessed' should come before 'processed'
-    sorted_messages = sorted(
-        messages, 
-        key=lambda x: (0 if x.get("status") == "unprocessed" else 1, x.get("time", "")),
-        reverse=False # We want unprocessed at top, then oldest for unprocessed? 
-                      # The user said "保证未处理信件显示在所有已处理信件上方" and "按时间排序"
-                      # Usually "按时间排序" within groups means newest first or oldest first. 
-                      # Let's assume newest first within groups.
-    )
-    
-    # Re-sorting logic for "unprocessed at top, then all sorted by time" usually implies:
-    # return [unprocessed, sorted by time] + [processed, sorted by time]
-    unprocessed = [m for m in sorted_messages if m.get("status") == "unprocessed"]
-    processed = [m for m in sorted_messages if m.get("status") == "processed"]
-    
+
+    unprocessed = [m for m in messages if m.get("status") == "unprocessed"]
+    handled = [m for m in messages if m.get("status") != "unprocessed"]
+
     unprocessed.sort(key=lambda x: x.get("time", ""), reverse=True)
-    processed.sort(key=lambda x: x.get("time", ""), reverse=True)
-    
-    return unprocessed + processed
+    handled.sort(
+        key=lambda x: x.get("processed_time") or x.get("time", ""),
+        reverse=True
+    )
+
+    return unprocessed + handled
 
 @app.post("/api/mailbox")
 def send_message(
