@@ -12,6 +12,13 @@ import httpx
 import urllib.parse
 from PIL import Image
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def backend_path(*parts):
+    return os.path.join(BASE_DIR, *parts)
+
+
 app = FastAPI()
 
 # Allow CORS for frontend
@@ -28,17 +35,23 @@ BGM_CLIENT_ID = os.getenv("BGM_CLIENT_ID", "default_id")
 BGM_CLIENT_SECRET = os.getenv("BGM_CLIENT_SECRET", "default_secret")
 BGM_REDIRECT_URI = os.getenv("BGM_REDIRECT_URI", "http://localhost:8000/api/auth/callback")
 
-DATA_DIR = "data"
-IMAGES_DIR = "images"
-USERS_DIR = "users"
-ADMINS_FILE = "admins.json"
-BANNED_FILE = "banned.json"
-HISTORY_FILE = "history.json"
-APPLICATIONS_FILE = "applications.json"
-MAILBOX_FILE = "mailbox.json"
-MAILBOX_HISTORY_FILE = "mailhistory.json"
-HISTORY_ARCHIVE_FILE = "historyarchive.json"
-BACKUP_DIR = "backups"
+DATA_DIR = backend_path("data")
+IMAGES_DIR = backend_path("images")
+USERS_DIR = backend_path("users")
+ADMINS_FILE = backend_path("admins.json")
+BANNED_FILE = backend_path("banned.json")
+HISTORY_FILE = backend_path("history.json")
+APPLICATIONS_FILE = backend_path("applications.json")
+MAILBOX_FILE = backend_path("mailbox.json")
+MAILBOX_HISTORY_FILE = backend_path("mailhistory.json")
+HISTORY_ARCHIVE_FILE = backend_path("historyarchive.json")
+BACKUP_DIR = backend_path("backups")
+
+
+def image_storage_path(image_url: str):
+    if not image_url or not image_url.startswith("/images/"):
+        return None
+    return os.path.join(IMAGES_DIR, os.path.basename(image_url))
 
 # Ensure data directory exists
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -151,8 +164,8 @@ def delete_node_file(node_id: int):
                 image_url = node.get("image", "")
                 # Delete image if it is not default
                 if image_url and not image_url.endswith("default.png") and image_url.startswith("/images/"):
-                    image_path = image_url.lstrip("/")
-                    if os.path.exists(image_path):
+                    image_path = image_storage_path(image_url)
+                    if image_path and os.path.exists(image_path):
                         os.remove(image_path)
         except:
             pass
@@ -624,7 +637,9 @@ def update_node(
         # Check if old_image is not default (simplified check for 'default')
         if old_image and "default" not in old_image and old_image.startswith("/images/"):
             try:
-                os.remove(old_image.lstrip("/"))
+                old_image_path = image_storage_path(old_image)
+                if old_image_path and os.path.exists(old_image_path):
+                    os.remove(old_image_path)
             except: pass
 
         filename = f"{uuid.uuid4()}.webp"
