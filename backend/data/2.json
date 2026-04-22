@@ -4,12 +4,14 @@
   "image": "/images/77741395-6681-4a02-a100-dc7498dcc92c.webp",
   "source": {
     "name": "BanG Dream! It's MyGO!!!!!",
-    "link": "https://bang-dream.com/mygo"
+    "link": "https://bang-dream.com/mygo",
+    "type": "其他"
   },
   "related": [
     {
       "name": "初期设定",
-      "link": ""
+      "link": "",
+      "type": "其他"
     }
   ],
   "tags": [
@@ -17,7 +19,7 @@
     "早期形象"
   ],
   "extension": [],
-  "x": -663.0,
-  "y": -1732.0,
+  "x": -944.0,
+  "y": -1932.0,
   "introduction": "最早的爱音形象，初设爱音，行动力很强但性格较为敏感"
 }

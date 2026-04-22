@@ -3,15 +3,27 @@
   "name": "大家族爱音",
   "image": "",
   "source": {
-    "name": "mygo大家族",
-    "link": ""
+    "name": "1.衣服/秘密",
+    "link": "https://uroborus44172.lofter.com/post/78fb8304_2bde9e9cb",
+    "type": "小说"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "【MyGO/mygo大家族】#1 衣服/秘密",
+      "link": "https://www.bilibili.com/video/BV1DaXAYAE9M",
+      "type": "视频"
+    },
+    {
+      "name": "【MyGO/mygo大家族第二季】#1 复活！/kiss！",
+      "link": "https://www.bilibili.com/video/BV1tRyiBtEG1",
+      "type": "视频"
+    }
+  ],
   "tags": [
     "二创"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《mygo》大家族中的爱音\r\n原作者B站：@名字总该没问题了吧\r\n原作者LOFTER：@uroborus\r\nB站视频化作者：@苗姐苗三水",
   "x": -106.96604911948087,
   "y": -105.15828229753853
 }

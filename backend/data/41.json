@@ -1,19 +1,21 @@
 {
   "id": 41,
   "name": "七年后爱音",
-  "image": "",
+  "image": "/images/862b2075-aaad-4cf9-a222-078ee18409f5.webp",
   "source": {
-    "name": "我在七年后等着你",
-    "link": ""
+    "name": "【7年后&MyGO!!!!!二创】我在7年后等着你 总集篇剧场版1 前半：起始的物语",
+    "link": "https://www.bilibili.com/video/BV17mYtenEpv/?share_source=copy_web&vd_source=7dfb6554185a14a6657ffda1d845084c",
+    "type": "视频"
   },
   "related": [],
   "tags": [
     "二创",
-    "剧情向"
+    "剧情向",
+    "完结"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "二创《我在七年后等着你》中的爱音形象\r\nB站作者：@二次有限元",
   "x": 457.4478293654607,
   "y": 221.20242815683534,
-  "is_famous": true
+  "is_famous": false
 }

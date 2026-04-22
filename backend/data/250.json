@@ -1,7 +1,7 @@
 {
   "id": 250,
   "name": "杀手爱音",
-  "image": "",
+  "image": "/images/9f4328d0-c192-42dc-87af-9258cca5953f.webp",
   "source": {
     "name": "【mygo/mujica】退休的杀手 千早爱音 #1",
     "link": "https://www.bilibili.com/video/BV1565Az9EEn",
@@ -10,7 +10,6 @@
   "related": [],
   "tags": [
     "二创",
-    "英国",
     "数值"
   ],
   "extension": [],
@@ -18,5 +17,6 @@
   "x": 1292.612489339917,
   "y": 1108.4640588065263,
   "time": "2026-03-06",
-  "new": true
+  "new": false,
+  "is_famous": false
 }

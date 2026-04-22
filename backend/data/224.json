@@ -7,7 +7,13 @@
     "link": "https://ngabbs.com/read.php?tid=42765988",
     "type": "小说"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "【东方 X BanG Dream】【安科】千早爱音想在幻想乡找齐乐队少女的样子",
+      "link": "https://www.bilibili.com/video/BV1dRPezEEaU/?spm_id_from=333.337.search-card.all.click&vd_source=590343231ac7efa25d06291c90740d58",
+      "type": "视频"
+    }
+  ],
   "tags": [
     "二创",
     "异世界",
@@ -16,7 +22,8 @@
     "NGA"
   ],
   "extension": [],
-  "introduction": "二创《千早爱音想在幻想乡找齐乐队少女的样子》中的爱音形象\r\n作者NGA：@瀚月西法",
+  "introduction": "二创《千早爱音想在幻想乡找齐乐队少女的样子》中的爱音形象\r\n作者NGA：@瀚月西法\r\nB站视频化作者：Meaincc",
   "x": -673.0623294542504,
-  "y": 481.9685963138004
+  "y": 481.9685963138004,
+  "is_famous": true
 }

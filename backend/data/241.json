@@ -1,20 +1,41 @@
 {
   "id": 241,
-  "name": "逆模因爱音",
-  "image": "",
+  "name": "拧发条鸟爱音",
+  "image": "/images/fd8d4a3c-e8b3-49b0-9d77-60cf9561a8ac.webp",
   "source": {
-    "name": "无人知晓千早爱音 ",
-    "link": "https://scp-wiki-cn.wikidot.com/anon-unknown-nobody",
+    "name": "刺杀深红之王 中心页 ",
+    "link": "https://scp-wiki-cn.wikidot.com/cishashenhongzhiwang",
     "type": "其他"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "无人知晓千早爱音",
+      "link": "https://scp-wiki-cn.wikidot.com/anon-unknown-nobody",
+      "type": "其他"
+    },
+    {
+      "name": "深红色的拧发条鸟",
+      "link": "https://scp-wiki-cn.wikidot.com/the-wind-up-bird-chihaya-anon-i",
+      "type": "其他"
+    },
+    {
+      "name": "乐奈救赎乌有之人",
+      "link": "https://scp-wiki-cn.wikidot.com/unknown-and-rana",
+      "type": "其他"
+    },
+    {
+      "name": "如是点燃千早爱音",
+      "link": "http://scp-wiki-cn.wikidot.com/gharfa-ruh",
+      "type": "其他"
+    }
+  ],
   "tags": [
     "二创",
     "异世界",
     "SCP"
   ],
   "extension": [],
-  "introduction": "二创《无人知晓千早爱音》中的爱音",
+  "introduction": "SCP基金会二创《刺杀深红之王》中的千早爱音\r\n\r\n同时也是《奇鸟行状录》和《人们都叫我动物》的crossover内容中的爱音\r\n\r\n与逆模因生物“红鸟”融合，成为某种记录与吐出故事的超自然生物的千早爱音。",
   "x": -1001.7701986299146,
   "y": 591.1950660873466
 }

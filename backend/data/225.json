@@ -1,21 +1,33 @@
 {
   "id": 225,
-  "name": "SCP-CN-3997",
+  "name": "SCP-CN-3997-M2",
   "image": "",
   "source": {
     "name": "SCP-CN-3997",
     "link": "https://scp-wiki-cn.wikidot.com/scp-cn-3997",
     "type": "其他"
   },
-  "related": [],
+  "related": [
+    {
+      "name": "【数据删除×MyGO!!!!!】爱 素 灯 希 の 奇 妙 冒 险（S.C.P.-CN-3997）",
+      "link": "https://www.bilibili.com/video/BV1VJuqzqE9m/",
+      "type": "视频"
+    },
+    {
+      "name": "[安科/安价][同人][scp基金会][迷途之子]scp-cn-3997的迷子们与泰拉归来的人偶们能否在5k的世界观中拯救世界",
+      "link": "https://ngabbs.com/read.php?tid=45418210",
+      "type": "其他"
+    }
+  ],
   "tags": [
     "二创",
     "异世界",
     "SCP",
-    "中国人"
+    "中国人",
+    "微血腥"
   ],
   "extension": [],
-  "introduction": "",
+  "introduction": "SCP-CN-3997《即便这就是你的一辈子》中的爱音同位体形象（艾茵）。\r\n作者Wikidot：@Ninth BB\r\n当原本只属于少女乐队间情感纠葛的“一辈子”，被强行拉升到了干涉宇宙兴衰的宏大尺度......",
   "x": -712.0911651459545,
   "y": 605.8538635385055
 }
