@@ -5,14 +5,21 @@ const props = defineProps({
   isPanelOpen: Boolean,
   isEditing: Boolean,
   isAdding: Boolean,
+  isSubmittingNode: Boolean,
+  isDeletingNode: Boolean,
+  isSavingPosition: Boolean,
+  isTogglingFamous: Boolean,
+  isUpdatingConnection: Boolean,
   selectedNode: Object,
   editForm: Object,
   apiBase: String,
   currentUser: Object,
   canEditSelectedNode: Boolean,
   canAddNode: Boolean,
+  canEditConnections: Boolean,
   canDeleteSelectedNode: Boolean,
   deleteDisabledReason: String,
+  connectionEditDisabledReason: String,
   isConnectionEditMode: Boolean
 })
 
@@ -28,6 +35,7 @@ const panelContent = ref(null)
 const panelState = reactive({ isDragging: false, startY: 0, scrollStart: 0 })
 
 const handlePanelMouseDown = (e) => {
+  if (props.isSubmittingNode) return
   panelState.isDragging = true
   panelState.startY = e.pageY - panelContent.value.offsetTop
   panelState.scrollStart = panelContent.value.scrollTop
@@ -46,6 +54,7 @@ const handlePanelMouseUp = () => {
 }
 
 const triggerFileInput = () => {
+  if (props.isSubmittingNode) return
   fileInput.value.click()
 }
 
@@ -148,30 +157,35 @@ defineExpose({ fileInput })
               >新增</button>
               <button
                 class="btn delete"
-                :class="{ 'disabled-btn': !canDeleteSelectedNode }"
-                :disabled="!canDeleteSelectedNode"
+                :class="{ 'disabled-btn': !canDeleteSelectedNode || isDeletingNode }"
+                :disabled="!canDeleteSelectedNode || isDeletingNode"
                 @click="$emit('deleteNode')"
-                :title="deleteDisabledReason"
-              >删除</button>
+                :title="isDeletingNode ? '删除中，请稍候' : deleteDisabledReason"
+              >{{ isDeletingNode ? '删除中...' : '删除' }}</button>
             </div>
             <div class="action-buttons" v-if="currentUser.role === 'admin'" style="margin-top: 0;">
               <button
                 class="btn save-pos"
+                :disabled="isSavingPosition"
                 @click="$emit('saveNodePosition')"
-                title="保存当前节点位置"
-              >保存位置</button>
+                :title="isSavingPosition ? '保存中，请稍候' : '保存当前节点位置'"
+              >{{ isSavingPosition ? '保存中...' : '保存位置' }}</button>
               <button
                 class="btn famous-toggle"
+                :disabled="isTogglingFamous"
                 @click="$emit('toggleFamousStatus')"
-                title="切换知名二创状态"
+                :title="isTogglingFamous ? '提交中，请稍候' : '切换知名二创状态'"
                 style="background: #87CEEB;"
-              >{{ selectedNode.is_famous ? '取消知名' : '设为知名' }}</button>
+              >{{ isTogglingFamous ? '提交中...' : (selectedNode.is_famous ? '取消知名' : '设为知名') }}</button>
+            </div>
+            <div class="action-buttons" style="margin-top: 0;">
               <button
                 class="btn connection-toggle"
+                :disabled="!canEditConnections || isUpdatingConnection"
                 @click="$emit('toggleConnectionEditMode')"
-                title="点击图中节点以增删连线"
+                :title="isUpdatingConnection ? '连线更新中，请稍候' : connectionEditDisabledReason"
                 :style="{ background: isConnectionEditMode ? '#ff6b6b' : '#9c88ff' }"
-              >{{ isConnectionEditMode ? '停止连线' : '增删连线' }}</button>
+              >{{ isUpdatingConnection ? '更新中...' : (isConnectionEditMode ? '停止连线' : '增删连线') }}</button>
             </div>
           </div>
         </template>
@@ -191,21 +205,21 @@ defineExpose({ fileInput })
               <span>暂无图片</span>
               <small>点击上传</small>
             </div>
-            <input type="file" ref="fileInput" hidden @change="onFileChange" accept="image/*">
+            <input type="file" ref="fileInput" hidden @change="onFileChange" accept="image/*" :disabled="isSubmittingNode">
           </div>
 
           <div class="input-group">
             <label>形象名字</label>
-            <input v-model="editForm.name" placeholder="名字">
+            <input v-model="editForm.name" placeholder="名字" :disabled="isSubmittingNode">
           </div>
 
           <div class="input-group">
             <label>出处</label>
             <div class="pair-input-row">
               <div class="pair-input">
-                <input v-model="editForm.source.name" placeholder="作品名字">
-                <input v-model="editForm.source.link" placeholder="链接 (可选)">
-                <select v-model="editForm.source.type" class="type-select">
+                <input v-model="editForm.source.name" placeholder="作品名字" :disabled="isSubmittingNode">
+                <input v-model="editForm.source.link" placeholder="链接 (可选)" :disabled="isSubmittingNode">
+                <select v-model="editForm.source.type" class="type-select" :disabled="isSubmittingNode">
                   <option>小说</option>
                   <option>视频</option>
                   <option>插画</option>
@@ -219,21 +233,21 @@ defineExpose({ fileInput })
 
           <div class="input-group">
             <label>介绍</label>
-            <textarea v-model="editForm.introduction" placeholder="简单介绍一下这个版本/形象..." rows="3"></textarea>
+            <textarea v-model="editForm.introduction" placeholder="简单介绍一下这个版本/形象..." rows="3" :disabled="isSubmittingNode"></textarea>
           </div>
 
           <div class="input-group">
             <label>标签 (逗号分隔)</label>
-            <input v-model="editForm.tags" placeholder="标签1, 标签2">
+            <input v-model="editForm.tags" placeholder="标签1, 标签2" :disabled="isSubmittingNode">
           </div>
 
           <div class="input-group">
             <label>相关作品</label>
             <div v-for="(item, index) in editForm.related" :key="index" class="pair-input-row">
               <div class="pair-input">
-                <input v-model="item.name" placeholder="名字" style="flex: 1.5; min-width: 80px;">
-                <input v-model="item.link" placeholder="链接 (可选)" style="flex: 2; min-width: 100px;">
-                <select v-model="item.type" class="type-select">
+                <input v-model="item.name" placeholder="名字" style="flex: 1.5; min-width: 80px;" :disabled="isSubmittingNode">
+                <input v-model="item.link" placeholder="链接 (可选)" style="flex: 2; min-width: 100px;" :disabled="isSubmittingNode">
+                <select v-model="item.type" class="type-select" :disabled="isSubmittingNode">
                   <option>小说</option>
                   <option>视频</option>
                   <option>插画</option>
@@ -242,14 +256,14 @@ defineExpose({ fileInput })
                   <option>其他</option>
                 </select>
               </div>
-              <button class="remove-btn" @click="$emit('removeRelated', index)" title="删除此项">×</button>
+              <button class="remove-btn" @click="$emit('removeRelated', index)" title="删除此项" :disabled="isSubmittingNode">×</button>
             </div>
-            <button class="add-btn" @click="$emit('addRelated')">+ 添加作品</button>
+            <button class="add-btn" @click="$emit('addRelated')" :disabled="isSubmittingNode">+ 添加作品</button>
           </div>
 
           <div class="form-actions">
-            <button class="btn confirm" @click="$emit('submitForm')">确认</button>
-            <button class="btn cancel" @click="$emit('cancelEdit')">取消</button>
+            <button class="btn confirm" @click="$emit('submitForm')" :disabled="isSubmittingNode">{{ isSubmittingNode ? (isAdding ? '提交中...' : '保存中...') : '确认' }}</button>
+            <button class="btn cancel" @click="$emit('cancelEdit')" :disabled="isSubmittingNode">取消</button>
           </div>
         </template>
       </div>

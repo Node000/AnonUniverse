@@ -1,12 +1,14 @@
 import { reactive, ref } from 'vue'
 import axios from 'axios'
 
-export function useNodeForm(apiBase, currentUser, deps) {
+export function useNodeForm(apiBase, currentUser, deps, notify = () => {}) {
   // deps: { selectedNode, isPanelOpen, fetchGraphData, fetchUserInfo, getNetwork, getNodesData, applyFilters }
 
   const isEditing = ref(false)
   const isAdding = ref(false)
   const parentIdForNewNode = ref(null)
+  const isSubmittingNode = ref(false)
+  const isDeletingNode = ref(false)
 
   const editForm = reactive({
     id: null,
@@ -73,6 +75,7 @@ export function useNodeForm(apiBase, currentUser, deps) {
   }
 
   const cancelEdit = () => {
+    if (isSubmittingNode.value) return
     isEditing.value = false
     isAdding.value = false
     parentIdForNewNode.value = null
@@ -87,12 +90,14 @@ export function useNodeForm(apiBase, currentUser, deps) {
   }
 
   const submitForm = async () => {
+    if (isSubmittingNode.value) return
+
     if (!editForm.name.trim()) {
-      alert('请输入形象名字')
+      notify('请输入形象名字', 'error')
       return
     }
     if (!editForm.source.name.trim()) {
-      alert('请输入出处作品名字')
+      notify('请输入出处作品名字', 'error')
       return
     }
 
@@ -126,6 +131,8 @@ export function useNodeForm(apiBase, currentUser, deps) {
     if (editForm.imageFile) {
       formData.append('image', editForm.imageFile)
     }
+
+    isSubmittingNode.value = true
 
     try {
       let resultNode
@@ -168,17 +175,25 @@ export function useNodeForm(apiBase, currentUser, deps) {
       }
 
       await deps.fetchUserInfo(currentUser.user_id, currentUser.nickname)
+      const successMessage = isAdding.value ? '新增形象成功' : '修改形象成功'
       isEditing.value = false
       isAdding.value = false
       deps.isPanelOpen.value = false
+      notify(successMessage)
     } catch (error) {
-      alert(error.response?.data?.detail || '保存失败')
+      notify(error.response?.data?.detail || '保存失败', 'error')
+    } finally {
+      isSubmittingNode.value = false
     }
   }
 
   const deleteNode = async () => {
+    if (isDeletingNode.value) return
+
     const confirmName = prompt(`你确定要删除 ${deps.selectedNode.value.name} 吗？请输入名字确认删除`)
     if (confirmName === deps.selectedNode.value.name) {
+      isDeletingNode.value = true
+
       try {
         await axios.delete(`${apiBase}/api/nodes/${deps.selectedNode.value.id}?user_id=${currentUser.user_id}&nickname=${currentUser.nickname}`)
         await deps.fetchGraphData()
@@ -194,11 +209,14 @@ export function useNodeForm(apiBase, currentUser, deps) {
 
         await deps.fetchUserInfo(currentUser.user_id, currentUser.nickname)
         deps.isPanelOpen.value = false
+        notify('删除成功')
       } catch (error) {
-        alert(error.response?.data?.detail || '删除失败')
+        notify(error.response?.data?.detail || '删除失败', 'error')
+      } finally {
+        isDeletingNode.value = false
       }
     } else if (confirmName !== null) {
-      alert('名字不一致，取消删除')
+      notify('名字不一致，取消删除', 'error')
     }
   }
 
@@ -206,6 +224,8 @@ export function useNodeForm(apiBase, currentUser, deps) {
     editForm,
     isEditing,
     isAdding,
+    isSubmittingNode,
+    isDeletingNode,
     parentIdForNewNode,
     startEdit,
     startAdd,

@@ -677,10 +677,9 @@ def update_node_extension(
 ):
     if user_id == "guest":
         raise HTTPException(403, "请登录后重试")
-    admins = load_admins()
-    if user_id not in admins:
-        raise HTTPException(403, "仅管理员可修改连线")
-        
+    if not check_permission(user_id, "edit"):
+        raise HTTPException(403, "今日修改配额已用完")
+         
     node_file = os.path.join(DATA_DIR, f"{node_id}.json")
     if not os.path.exists(node_file):
         raise HTTPException(404, "Node not found")
@@ -996,6 +995,8 @@ def process_message(
     msg = next((m for m in messages if m["id"] == msg_id), None)
     if not msg:
         raise HTTPException(404, "Message not found")
+    if msg.get("status") != "unprocessed":
+        raise HTTPException(400, "该信件已处理，请刷新后重试")
         
     msg["status"] = "processed" if action == "process" else "rejected"
     msg["processed_by"] = nickname

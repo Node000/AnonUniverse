@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import axios from 'axios'
 
-export function useMailbox(apiBase, currentUser, fetchUserInfo) {
+export function useMailbox(apiBase, currentUser, fetchUserInfo, notify = () => {}) {
   const mailboxMessages = ref([])
   const showMailboxModal = ref(false)
   const newMessageContent = ref('')
@@ -10,6 +10,8 @@ export function useMailbox(apiBase, currentUser, fetchUserInfo) {
   const processingMessageId = ref(null)
   const processingAction = ref('')
   const feedbackContent = ref('')
+  const isSendingMessage = ref(false)
+  const isSubmittingFeedback = ref(false)
 
   const canSendMessage = computed(() => {
     if (!currentUser.logged_in) return false
@@ -47,12 +49,14 @@ export function useMailbox(apiBase, currentUser, fetchUserInfo) {
   }
 
   const submitMailboxMessage = async () => {
+    if (isSendingMessage.value) return
+
     if (!newMessageContent.value.trim()) {
-      alert('请输入信件内容')
+      notify('请输入信件内容', 'error')
       return
     }
     if (newMessageContent.value.length > 200) {
-      alert('内容不能超过200字')
+      notify('内容不能超过200字', 'error')
       return
     }
 
@@ -61,14 +65,19 @@ export function useMailbox(apiBase, currentUser, fetchUserInfo) {
     formData.append('user_id', currentUser.user_id)
     formData.append('nickname', currentUser.nickname)
 
+    isSendingMessage.value = true
+
     try {
       await axios.post(`${apiBase}/api/mailbox`, formData)
       newMessageContent.value = ''
       showNewMessageModal.value = false
       await fetchMailbox()
       await fetchUserInfo(currentUser.user_id, currentUser.nickname)
+      notify('信件投递成功')
     } catch (error) {
-      alert(error.response?.data?.detail || '发送失败')
+      notify(error.response?.data?.detail || '发送失败', 'error')
+    } finally {
+      isSendingMessage.value = false
     }
   }
 
@@ -80,8 +89,10 @@ export function useMailbox(apiBase, currentUser, fetchUserInfo) {
   }
 
   const submitFeedback = async () => {
+    if (isSubmittingFeedback.value) return
+
     if (feedbackContent.value.length > 30) {
-      alert('反馈不能超过30字')
+      notify('反馈不能超过30字', 'error')
       return
     }
 
@@ -91,13 +102,21 @@ export function useMailbox(apiBase, currentUser, fetchUserInfo) {
     formData.append('user_id', currentUser.user_id)
     formData.append('nickname', currentUser.nickname)
 
+    isSubmittingFeedback.value = true
+
     try {
       await axios.post(`${apiBase}/api/mailbox/${processingMessageId.value}/process`, formData)
       showFeedbackModal.value = false
       await fetchMailbox()
+      notify(processingAction.value === 'process' ? '信件处理成功' : '信件已拒绝')
+      processingMessageId.value = null
+      processingAction.value = ''
+      feedbackContent.value = ''
     } catch (error) {
       console.error('Failed to process message:', error)
-      alert('提交失败')
+      notify(error.response?.data?.detail || '提交失败', 'error')
+    } finally {
+      isSubmittingFeedback.value = false
     }
   }
 
@@ -110,6 +129,8 @@ export function useMailbox(apiBase, currentUser, fetchUserInfo) {
     processingMessageId,
     processingAction,
     feedbackContent,
+    isSendingMessage,
+    isSubmittingFeedback,
     canSendMessage,
     unprocessedMailCount,
     shouldShowExpand,

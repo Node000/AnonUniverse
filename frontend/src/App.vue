@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import './styles/app-main.css'
 
 // Components
@@ -31,6 +31,26 @@ import { useNodeForm } from './composables/useNodeForm'
 
 const apiBase = import.meta.env.DEV ? 'http://localhost:8000' : ''
 
+const toastState = reactive({
+  visible: false,
+  message: '',
+  type: 'success'
+})
+let toastTimer = null
+
+const showToast = (message, type = 'success') => {
+  if (!message) return
+
+  toastState.message = message
+  toastState.type = type
+  toastState.visible = true
+
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastState.visible = false
+  }, 2600)
+}
+
 // --- Initialize composables ---
 
 const {
@@ -43,9 +63,10 @@ const { showHistory, historyData, historyType, isHistoryLoading, toggleHistory }
 const {
   mailboxMessages, showMailboxModal, newMessageContent, showNewMessageModal,
   showFeedbackModal, processingAction, feedbackContent,
+  isSendingMessage, isSubmittingFeedback,
   canSendMessage, unprocessedMailCount, shouldShowExpand,
   fetchMailbox, openMailbox, submitMailboxMessage, handleProcessMessage, submitFeedback
-} = useMailbox(apiBase, currentUser, fetchUserInfo)
+} = useMailbox(apiBase, currentUser, fetchUserInfo, showToast)
 
 const { isDarkMode, toggleDarkMode } = useTheme(
   () => graph.getNetwork(),
@@ -64,15 +85,16 @@ const graphCallbacks = {
   isAdding: ref(false)
 }
 
-const graph = useGraph(apiBase, currentUser, isDarkMode, graphCallbacks)
+const graph = useGraph(apiBase, currentUser, isDarkMode, graphCallbacks, showToast)
 
 const {
   vizContainer, loading, selectedNode, isPanelOpen, focusedNodeId,
   showFamous, showNewNodes, isConnectionEditMode,
-  canDeleteSelectedNode, deleteDisabledReason, canEditSelectedNode, canAddNode, editButtonsDisabledReason,
+  isUpdatingConnection, isSavingPosition,
+  canDeleteSelectedNode, deleteDisabledReason, canEditSelectedNode, canAddNode, canEditConnections, connectionEditDisabledReason, editButtonsDisabledReason,
   getNetwork, getNodesData, getEdgesData,
   fetchGraphData, focusNode, resetView, toggleConnectionEditMode,
-  handleNodeConnection, saveNodePosition, initNetwork
+  saveNodePosition, initNetwork
 } = graph
 
 // Search & Filter (needs nodesData/edgesData/focusNode)
@@ -83,7 +105,7 @@ const {
 
 // Node Form
 const {
-  editForm, isEditing, isAdding, parentIdForNewNode,
+  editForm, isEditing, isAdding, isSubmittingNode, isDeletingNode,
   startEdit, startAdd, cancelEdit, addRelated, removeRelated, submitForm, deleteNode
 } = useNodeForm(apiBase, currentUser, {
   selectedNode,
@@ -93,7 +115,7 @@ const {
   getNetwork,
   getNodesData,
   applyFilters
-})
+}, showToast)
 
 // Patch lazy references now that all composables are initialized
 graphCallbacks.cancelEdit = cancelEdit
@@ -112,8 +134,9 @@ const {
 // Famous Applications
 const {
   pendingApplications, showPendingApplicationsModal,
-  openPendingApplications, toggleFamousStatus
-} = useFamousApplications(apiBase, currentUser, getNodesData, selectedNode)
+  isTogglingFamous, processingApplicationId,
+  toggleFamousStatus, processApplication
+} = useFamousApplications(apiBase, currentUser, getNodesData, selectedNode, showToast)
 
 // --- UI state ---
 const showSiteInfo = ref(false)
@@ -162,6 +185,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  if (toastTimer) clearTimeout(toastTimer)
   window.removeEventListener('click', globalClickHandler)
   window.removeEventListener('mousemove', handleMouseMove)
 })
@@ -230,14 +254,21 @@ onUnmounted(() => {
       :isPanelOpen="isPanelOpen"
       :isEditing="isEditing"
       :isAdding="isAdding"
+      :isSubmittingNode="isSubmittingNode"
+      :isDeletingNode="isDeletingNode"
+      :isSavingPosition="isSavingPosition"
+      :isTogglingFamous="isTogglingFamous"
+      :isUpdatingConnection="isUpdatingConnection"
       :selectedNode="selectedNode"
       :editForm="editForm"
       :apiBase="apiBase"
       :currentUser="currentUser"
       :canEditSelectedNode="canEditSelectedNode"
       :canAddNode="canAddNode"
+      :canEditConnections="canEditConnections"
       :canDeleteSelectedNode="canDeleteSelectedNode"
       :deleteDisabledReason="deleteDisabledReason"
+      :connectionEditDisabledReason="connectionEditDisabledReason"
       :isConnectionEditMode="isConnectionEditMode"
       @close="isPanelOpen = false"
       @toggleHistory="toggleHistory"
@@ -288,6 +319,7 @@ onUnmounted(() => {
     <NewMessageModal
       :show="showNewMessageModal"
       :isDarkMode="isDarkMode"
+      :isSubmitting="isSendingMessage"
       v-model="newMessageContent"
       @close="showNewMessageModal = false"
       @submit="submitMailboxMessage"
@@ -297,6 +329,7 @@ onUnmounted(() => {
       :show="showFeedbackModal"
       :isDarkMode="isDarkMode"
       v-model="feedbackContent"
+      :isSubmitting="isSubmittingFeedback"
       :actionLabel="processingAction === 'process' ? '处理' : '拒绝'"
       @close="showFeedbackModal = false"
       @submit="submitFeedback"
@@ -305,6 +338,7 @@ onUnmounted(() => {
     <PendingApplicationsModal
       :show="showPendingApplicationsModal"
       :pendingApplications="pendingApplications"
+      :processingApplicationId="processingApplicationId"
       @close="showPendingApplicationsModal = false"
       @approve="(id) => processApplication(id, 'approve')"
       @reject="(id) => processApplication(id, 'reject')"
@@ -332,5 +366,11 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <Transition name="toast-fade">
+      <div v-if="toastState.visible" class="app-toast" :class="toastState.type">
+        {{ toastState.message }}
+      </div>
+    </Transition>
   </div>
 </template>

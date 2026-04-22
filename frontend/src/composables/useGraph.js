@@ -3,7 +3,7 @@ import { Network } from 'vis-network'
 import { DataSet } from 'vis-data'
 import axios from 'axios'
 
-export function useGraph(apiBase, currentUser, isDarkMode, callbacks) {
+export function useGraph(apiBase, currentUser, isDarkMode, callbacks, notify = () => {}) {
   // callbacks: { cancelEdit, triggerNotificationCheck, applyFilters, activeFilters, isEditing, isAdding, isConnectionEditMode: unused (we own it) }
 
   const vizContainer = ref(null)
@@ -14,6 +14,8 @@ export function useGraph(apiBase, currentUser, isDarkMode, callbacks) {
   const showFamous = ref(false)
   const showNewNodes = ref(false)
   const isConnectionEditMode = ref(false)
+  const isUpdatingConnection = ref(false)
+  const isSavingPosition = ref(false)
   let isDraggingNode = false
 
   let network = null
@@ -58,6 +60,20 @@ export function useGraph(apiBase, currentUser, isDarkMode, callbacks) {
     if (!currentUser.logged_in || currentUser.role === 'banned') return false
     if (currentUser.role === 'admin') return true
     return currentUser.quota && currentUser.quota.adds < 10
+  })
+
+  const canEditConnections = computed(() => {
+    if (!selectedNode.value || !currentUser.logged_in || currentUser.role === 'banned') return false
+    if (currentUser.role === 'admin') return true
+    return currentUser.quota && currentUser.quota.edits < 10
+  })
+
+  const connectionEditDisabledReason = computed(() => {
+    if (!selectedNode.value) return ''
+    if (!currentUser.logged_in) return '请登录后操作'
+    if (currentUser.role === 'banned') return '账号已被封禁'
+    if (currentUser.role !== 'admin' && currentUser.quota && currentUser.quota.edits >= 10) return '今日修改配额已用完'
+    return '点击后可在图中增删连线，每次消耗1次修改次数'
   })
 
   const editButtonsDisabledReason = computed(() => {
@@ -213,11 +229,23 @@ export function useGraph(apiBase, currentUser, isDarkMode, callbacks) {
   }
 
   const toggleConnectionEditMode = () => {
+    if (isUpdatingConnection.value) return
+
+    if (!canEditConnections.value) {
+      notify(connectionEditDisabledReason.value || '当前无法修改连线', 'error')
+      return
+    }
+
     isConnectionEditMode.value = !isConnectionEditMode.value
   }
 
   const handleNodeConnection = async (targetId) => {
-    if (!selectedNode.value || currentUser.role !== 'admin') return
+    if (!selectedNode.value || isUpdatingConnection.value) return
+    if (!canEditConnections.value) {
+      notify(connectionEditDisabledReason.value || '当前无法修改连线', 'error')
+      isConnectionEditMode.value = false
+      return
+    }
 
     const currentExtensions = selectedNode.value.extension || []
     const isRemoving = currentExtensions.includes(targetId)
@@ -227,6 +255,8 @@ export function useGraph(apiBase, currentUser, isDarkMode, callbacks) {
     formData.append('action', isRemoving ? 'remove' : 'add')
     formData.append('user_id', currentUser.user_id)
     formData.append('nickname', currentUser.nickname)
+
+    isUpdatingConnection.value = true
 
     try {
       const response = await axios.patch(`${apiBase}/api/nodes/${selectedNode.value.id}/extension`, formData)
@@ -261,14 +291,17 @@ export function useGraph(apiBase, currentUser, isDarkMode, callbacks) {
           if (network) network.setOptions({ physics: { enabled: false } })
         }, 3000)
       }
+      notify(isRemoving ? '连线已移除' : '连线已添加')
     } catch (error) {
       console.error(error)
-      alert(error.response?.data?.detail || '修改连线失败')
+      notify(error.response?.data?.detail || '修改连线失败', 'error')
+    } finally {
+      isUpdatingConnection.value = false
     }
   }
 
   const saveNodePosition = async () => {
-    if (!selectedNode.value || !network) return
+    if (!selectedNode.value || !network || isSavingPosition.value) return
 
     const pos = network.getPositions([selectedNode.value.id])[selectedNode.value.id]
     if (!pos) return
@@ -279,11 +312,15 @@ export function useGraph(apiBase, currentUser, isDarkMode, callbacks) {
     formData.append('user_id', currentUser.user_id)
     formData.append('nickname', currentUser.nickname)
 
+    isSavingPosition.value = true
+
     try {
       await axios.patch(`${apiBase}/api/nodes/${selectedNode.value.id}/position`, formData)
-      alert('位置保存成功')
+      notify('位置保存成功')
     } catch (error) {
-      alert(error.response?.data?.detail || '保存位置失败')
+      notify(error.response?.data?.detail || '保存位置失败', 'error')
+    } finally {
+      isSavingPosition.value = false
     }
   }
 
@@ -566,10 +603,14 @@ export function useGraph(apiBase, currentUser, isDarkMode, callbacks) {
     showFamous,
     showNewNodes,
     isConnectionEditMode,
+    isUpdatingConnection,
+    isSavingPosition,
     canDeleteSelectedNode,
     deleteDisabledReason,
     canEditSelectedNode,
     canAddNode,
+    canEditConnections,
+    connectionEditDisabledReason,
     editButtonsDisabledReason,
     getNetwork,
     getNodesData,
